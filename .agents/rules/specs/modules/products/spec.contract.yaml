@@ -1,0 +1,199 @@
+module: products
+user_stories:
+  - id: HU-004
+    slug: registrar-nuevo-producto
+    title: Registrar nuevo producto
+
+backend:
+  app_name: inventario
+  permissions:
+    - app_label: inventario
+      codename: add_producto
+      name: Puede registrar y crear nuevos productos en el catálogo
+    - app_label: inventario
+      codename: view_producto
+      name: Puede consultar y listar productos
+
+  models:
+    - name: Producto
+      module: inventario.models
+      db_table: inventario_producto
+      description: Modelo para el catálogo de productos y control de existencias en tienda.
+      fields:
+        - name: id
+          type: AutoField / BigAutoField
+          primary_key: true
+        - name: nombre
+          type: CharField(max_length=100, unique=True)
+          verbose_name: "Nombre del producto"
+          help_text: "Nombre identificador único del producto."
+        - name: slug
+          type: SlugField(max_length=120, unique=True, blank=True)
+          verbose_name: "Slug URL"
+          help_text: "Identificador amigable generado automáticamente a partir del nombre."
+        - name: categoria
+          type: ForeignKey(Categoria, on_delete=models.PROTECT, related_name="productos")
+          verbose_name: "Categoría"
+          help_text: "Categoría a la que pertenece el producto. Relación 1:N: cada producto pertenece a una única categoría y una categoría puede agrupar múltiples productos (categoria.productos)."
+        - name: descripcion
+          type: TextField(max_length=500, blank=True, default="")
+          verbose_name: "Descripción"
+          help_text: "Detalle opcional sobre las especificaciones del artículo."
+        - name: precio_compra
+          type: DecimalField(max_digits=10, decimal_places=2, default=0.00)
+          verbose_name: "Precio de compra"
+          help_text: "Costo unitario de adquisición del producto."
+        - name: precio_venta
+          type: DecimalField(max_digits=10, decimal_places=2, default=0.00)
+          verbose_name: "Precio de venta"
+          help_text: "Precio unitario de venta al público."
+        - name: stock_actual
+          type: PositiveIntegerField(default=0)
+          verbose_name: "Stock actual"
+          help_text: "Cantidad de unidades físicas disponibles en inventario."
+        - name: stock_minimo
+          type: PositiveIntegerField(default=0)
+          verbose_name: "Stock mínimo"
+          help_text: "Umbral para alertas tempranas de reabastecimiento."
+        - name: activo
+          type: BooleanField(default=True)
+          verbose_name: "Activo"
+          help_text: "Indica si el producto está disponible para venta y catálogo."
+        - name: imagen
+          type: ImageField(upload_to="productos/", blank=True, null=True)
+          verbose_name: "Imagen del producto"
+          help_text: "Fotografía o ilustración del producto (opcional)."
+        - name: creado_en
+          type: DateTimeField(auto_now_add=True)
+          verbose_name: "Fecha de creación"
+        - name: actualizado_en
+          type: DateTimeField(auto_now=True)
+          verbose_name: "Última actualización"
+      options:
+        verbose_name: "Producto"
+        verbose_name_plural: "Productos"
+        ordering: ["nombre"]
+      relationships:
+        - type: "Many-to-One (ForeignKey)"
+          target_model: "inventario.models.Categoria"
+          field: "categoria"
+          related_name: "productos"
+          on_delete: "models.PROTECT"
+          cardinality: "1 Categoría -> N Productos; 1 Producto -> 1 Categoría"
+          description: >
+            Cada producto pertenece estrictamente a una categoría. Una categoría puede tener
+            múltiples productos asociados accesibles mediante el related_name 'categoria.productos.all()'.
+            Se protege el borrado de categorías con productos asociados mediante models.PROTECT.
+      methods:
+        - name: __str__
+          returns: str
+          description: "Retorna el nombre del producto."
+        - name: clean
+          description: >
+            Valida unicidad case-insensitive del nombre del producto (excluyendo la propia instancia si ya existe),
+            que los precios no sean negativos y que el precio de venta no sea inferior al precio de compra si se suministran.
+        - name: save
+          description: "Genera automáticamente el slug amigable a partir del nombre si no está definido."
+        - name: imagen_url
+          returns: str
+          description: "Retorna la URL de la imagen subida en /media/productos/ o la ruta a la imagen genérica por defecto."
+        - name: en_stock
+          returns: bool
+          description: "Indica si el producto posee existencias disponibles (stock_actual > 0)."
+
+  services:
+    - class_name: CrearProductoService
+      module: inventario.services
+      methods:
+        - name: execute
+          type: staticmethod
+          decorator: "@transaction.atomic"
+          parameters:
+            - name: nombre
+              type: str
+              required: true
+            - name: categoria
+              type: inventario.models.Categoria
+              required: true
+            - name: precio_compra
+              type: decimal.Decimal
+              required: true
+            - name: precio_venta
+              type: decimal.Decimal
+              required: true
+            - name: stock_actual
+              type: int
+              required: false
+              default: 0
+            - name: stock_minimo
+              type: int
+              required: false
+              default: 0
+            - name: descripcion
+              type: str
+              required: false
+              default: '""'
+            - name: activo
+              type: bool
+              required: false
+              default: true
+            - name: imagen
+              type: typing.Optional[django.core.files.File]
+              required: false
+              default: null
+          returns: inventario.models.Producto
+          raises:
+            - django.core.exceptions.ValidationError
+
+  forms:
+    - class_name: ProductoForm
+      module: inventario.forms
+      base_class: django.forms.ModelForm
+      model: inventario.models.Producto
+      fields:
+        - nombre
+        - categoria
+        - precio_compra
+        - precio_venta
+        - stock_actual
+        - stock_minimo
+        - descripcion
+        - activo
+        - imagen
+      clean_methods:
+        - clean_nombre: "Sanitiza espacios, valida longitud <= 100 y unicidad case-insensitive ('El producto ya se encuentra registrado')."
+        - clean_precio_compra: "Valida que el valor sea mayor o igual a cero."
+        - clean_precio_venta: "Valida que el valor sea mayor o igual a cero."
+        - clean_stock_actual: "Valida que la cantidad no sea negativa."
+        - clean_stock_minimo: "Valida que el umbral mínimo no sea negativo."
+        - clean_descripcion: "Sanitiza espacios y valida longitud <= 500."
+
+  routing_and_views:
+    - path: "inventario/productos/crear/"
+      view_name: inventario:crear_producto
+      function: inventario.views.crear_producto_view
+      http_methods:
+        - GET: >
+            Renderiza el formulario de creación de producto con las categorías ordenadas alfabéticamente
+            y con soporte para autocompletado en el selector.
+        - POST: >
+            Valida los datos recibidos (incluyendo multipart para archivos de imagen)
+            y delega la creación a CrearProductoService.
+      auth_requirements:
+        - login_required: true
+        - permission_required: "inventario.add_producto"
+        - raise_exception: true
+
+frontend:
+  templates:
+    - path: "inventario/producto_form.html"
+      layout: "layouts/base.html"
+      page_title: "Nuevo Producto · TeckStore Admin"
+      features:
+        - Formulario accesible con etiquetas `<label for="...">` asociadas a cada input.
+        - Notificación / Mensaje de éxito accesible con `role="status"` o `role="alert"` que se desvanece a los 5 segundos con botón de cierre manual.
+        - Selector de categorías ordenado alfabéticamente con autocompletado nativo/datalist o select accesible.
+        - Inputs numéricos de precios y stock con formato 'font-mono tabular-nums'.
+        - Zona de subida o previsualización de imagen con fallback a imagen genérica.
+        - Botón de guardado primario 'bg-emerald-600 hover:bg-emerald-700 text-white' y botón cancelar 'bg-white hover:bg-slate-50 text-slate-700'.
+        - Mantenimiento del sidebar drawer inmutable sin alterar el layout principal.

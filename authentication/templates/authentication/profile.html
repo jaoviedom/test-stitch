@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col w-full max-w-6xl mx-auto gap-12 lg:gap-14 pb-20">
+
+  <!-- Header & Back Navigation -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+    <div class="flex flex-col gap-1.5">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
+        Mi Perfil de Usuario
+      </h1>
+      <p class="text-xs sm:text-sm text-on-surface-variant max-w-2xl">
+        Gestiona tu información de identidad personal, revisa tus roles operativos en el sistema y administra tus credenciales de acceso de forma segura.
+      </p>
+    </div>
+  </div>
+
+  <!-- User Overview & Roles Banner Card -->
+  <div class="mb-4 p-8 sm:p-10 rounded-3xl bg-surface-container border border-outline-variant/40 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 transition-all">
+    <div class="flex items-center gap-6">
+      <!-- Completely Rounded Avatar Circle -->
+      <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full aspect-square bg-gradient-to-tr from-primary-container via-primary-container to-secondary flex items-center justify-center font-extrabold text-2xl sm:text-3xl text-on-primary-container ring-4 ring-primary/30 shadow-xl shrink-0 select-none">
+        {{ profile_user.first_name|default:profile_user.username|slice:":2"|upper }}
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="font-extrabold text-xl sm:text-2xl text-on-surface tracking-tight">
+            {% if profile_user.first_name %}{{ profile_user.first_name }}{% if profile_user.last_name %} {{ profile_user.last_name }}{% endif %}{% else %}{{ profile_user.username }}{% endif %}
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-secondary/15 text-secondary border border-secondary/30 shadow-2xs">
+            <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            <span>Cuenta Activa</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2 text-xs sm:text-sm text-outline font-mono">
+          <span>@{{ profile_user.username }}</span>
+          <span>•</span>
+          <span>{{ profile_user.email }}</span>
+        </div>
+        <span class="text-[11px] text-on-surface-variant mt-0.5">
+          Miembro en la plataforma desde {{ profile_user.date_joined|date:"d M Y" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Read-Only Assigned Roles Section (Isolated Container) -->
+    <div class="flex flex-col items-start lg:items-end gap-3 w-full lg:w-auto pt-6 lg:pt-0 border-t lg:border-t-0 border-outline-variant/20">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-outline flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+        <span>Roles Asignados (Solo Lectura)</span>
+      </span>
+      <div class="flex flex-wrap items-center gap-2">
+        {% for group in profile_user.groups.all %}
+          <span class="px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-surface-container-highest text-primary border border-outline-variant/40 shadow-xs flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span>{{ group.name }}</span>
+          </span>
+        {% empty %}
+          <span class="px-4 py-1.5 rounded-xl text-xs font-medium bg-surface-container-highest text-on-surface-variant border border-outline-variant/30">
+            Rol: Usuario Estándar
+          </span>
+        {% endfor %}
+      </div>
+      <p class="text-[11px] text-outline text-left lg:text-right max-w-xs">
+        Tus niveles de acceso son gestionados centralmente por el Administrador.
+      </p>
+    </div>
+  </div>
+
+  <!-- Distinct Widely Separated Two-Column Cards Grid for Forms -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 xl:gap-16 items-stretch">
+
+    <!-- Card 1: Información Personal -->
+    <div class="mb-4 p-8 sm:p-10 rounded-3xl bg-surface-container border border-outline-variant/40 shadow-xl flex flex-col justify-between gap-8 transition-all hover:border-primary/40 hover:shadow-2xl">
+      <div class="flex flex-col gap-7">
+        <!-- Card Header -->
+        <div class="flex items-center gap-4 pb-6 border-b border-outline-variant/20">
+          <div class="w-13 h-13 rounded-2xl bg-primary-container/20 border border-primary/30 flex items-center justify-center text-primary shadow-xs">
+            <span class="material-symbols-outlined text-[26px]">badge</span>
+          </div>
+          <div>
+            <h2 class="font-bold text-lg sm:text-xl text-on-surface tracking-tight">Información Personal</h2>
+            <p class="text-xs sm:text-sm text-on-surface-variant">Actualiza tu nombre completo y correo de contacto.</p>
+          </div>
+        </div>
+
+        <!-- Form 1 -->
+        <form method="POST" action="{% url 'authentication:profile' %}" class="flex flex-col gap-6">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update_profile">
+
+          {% if profile_form.non_field_errors %}
+            <div role="alert" aria-live="polite" class="p-4 rounded-xl bg-error/15 border border-error/30 text-error text-xs font-medium flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[20px]">error</span>
+              <span>{{ profile_form.non_field_errors.0 }}</span>
+            </div>
+          {% endif %}
+
+          <!-- Campo: Nombre Completo -->
+          <div class="flex flex-col gap-2">
+            <label for="id_first_name" class="text-xs sm:text-sm font-semibold text-on-surface flex items-center justify-between">
+              <span>Nombre Completo <span class="text-error">*</span></span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">person</span>
+              <input 
+                type="text"
+                name="first_name"
+                id="id_first_name"
+                value="{{ profile_form.first_name.value|default_if_none:'' }}"
+                autocomplete="name"
+                placeholder="Ej. Jose Alonso Oviedo"
+                required
+                {% if profile_form.first_name.errors %}aria-invalid="true"{% endif %}
+                class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline text-sm pl-12 pr-4 rounded-2xl border {% if profile_form.first_name.errors %}border-error text-error focus:border-error focus:ring-2 focus:ring-error/20{% else %}border-outline-variant/40 focus:border-primary focus:ring-2 focus:ring-primary/20{% endif %} focus:outline-none transition-all shadow-2xs"
+              >
+            </div>
+            {% if profile_form.first_name.errors %}
+              <p role="alert" aria-live="polite" class="text-xs text-error font-medium flex items-center gap-1.5 mt-1">
+                <span class="material-symbols-outlined text-[15px]">error</span>
+                <span>{{ profile_form.first_name.errors.0 }}</span>
+              </p>
+            {% endif %}
+          </div>
+
+          <!-- Campo: Correo Electrónico -->
+          <div class="flex flex-col gap-2">
+            <label for="id_email" class="text-xs sm:text-sm font-semibold text-on-surface flex items-center justify-between">
+              <span>Correo Electrónico <span class="text-error">*</span></span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">mail</span>
+              <input 
+                type="email"
+                name="email"
+                id="id_email"
+                value="{{ profile_form.email.value|default_if_none:'' }}"
+                autocomplete="email"
+                placeholder="usuario@teckstore.io"
+                required
+                {% if profile_form.email.errors %}aria-invalid="true"{% endif %}
+                class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline text-sm pl-12 pr-4 rounded-2xl border {% if profile_form.email.errors %}border-error text-error focus:border-error focus:ring-2 focus:ring-error/20{% else %}border-outline-variant/40 focus:border-primary focus:ring-2 focus:ring-primary/20{% endif %} focus:outline-none transition-all shadow-2xs"
+              >
+            </div>
+            {% if profile_form.email.errors %}
+              <p role="alert" aria-live="polite" class="text-xs text-error font-medium flex items-center gap-1.5 mt-1">
+                <span class="material-symbols-outlined text-[15px]">error</span>
+                <span>{{ profile_form.email.errors.0 }}</span>
+              </p>
+            {% endif %}
+          </div>
+
+          <!-- Campo Solo Lectura: Nombre de Usuario -->
+          <div class="flex flex-col gap-2 opacity-85">
+            <label class="text-xs sm:text-sm font-semibold text-on-surface-variant flex items-center justify-between">
+              <span>Nombre de Usuario (Identificador)</span>
+              <span class="text-[10px] text-outline font-medium px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant/30 uppercase tracking-wider">Inmutable</span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">alternate_email</span>
+              <input 
+                type="text"
+                value="{{ profile_user.username }}"
+                disabled
+                class="w-full h-12 bg-surface-container-high text-on-surface-variant font-mono text-xs pl-12 pr-4 rounded-2xl border border-outline-variant/30 cursor-not-allowed select-none"
+              >
+            </div>
+          </div>
+
+          <!-- Botón Guardar Perfil -->
+          <div class="pt-4">
+            <button 
+              type="submit"
+              class="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-primary-container text-on-primary-container font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            >
+              <span class="material-symbols-outlined text-[19px]">save</span>
+              <span>Guardar Información</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Card 2: Seguridad y Cambio de Contraseña -->
+    <div class="p-8 sm:p-10 rounded-3xl bg-surface-container border border-outline-variant/40 shadow-xl flex flex-col justify-between gap-8 transition-all hover:border-secondary/40 hover:shadow-2xl">
+      <div class="flex flex-col gap-7">
+        <!-- Card Header -->
+        <div class="flex items-center gap-4 pb-6 border-b border-outline-variant/20">
+          <div class="w-13 h-13 rounded-2xl bg-secondary/15 border border-secondary/30 flex items-center justify-center text-secondary shadow-xs">
+            <span class="material-symbols-outlined text-[26px]">lock_reset</span>
+          </div>
+          <div>
+            <h2 class="font-bold text-lg sm:text-xl text-on-surface tracking-tight">Seguridad y Contraseña</h2>
+            <p class="text-xs sm:text-sm text-on-surface-variant">Modifica tu clave de acceso validando previamente tu clave actual.</p>
+          </div>
+        </div>
+
+        <!-- Form 2 -->
+        <form method="POST" action="{% url 'authentication:profile' %}" class="flex flex-col gap-6">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="change_password">
+
+          {% if password_form.non_field_errors %}
+            <div role="alert" aria-live="polite" class="p-4 rounded-xl bg-error/15 border border-error/30 text-error text-xs font-medium flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[20px]">error</span>
+              <span>{{ password_form.non_field_errors.0 }}</span>
+            </div>
+          {% endif %}
+
+          <!-- Campo: Contraseña Actual -->
+          <div class="flex flex-col gap-2">
+            <label for="id_current_password" class="text-xs sm:text-sm font-semibold text-on-surface flex items-center justify-between">
+              <span>Contraseña Actual <span class="text-error">*</span></span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">key</span>
+              <input 
+                type="password"
+                name="current_password"
+                id="id_current_password"
+                placeholder="••••••••••••"
+                autocomplete="current-password"
+                required
+                {% if password_form.current_password.errors %}aria-invalid="true"{% endif %}
+                class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline text-sm pl-12 pr-4 rounded-2xl border {% if password_form.current_password.errors %}border-error text-error focus:border-error focus:ring-2 focus:ring-error/20{% else %}border-outline-variant/40 focus:border-primary focus:ring-2 focus:ring-primary/20{% endif %} focus:outline-none transition-all shadow-2xs"
+              >
+            </div>
+            {% if password_form.current_password.errors %}
+              <p role="alert" aria-live="polite" class="text-xs text-error font-medium flex items-center gap-1.5 mt-1">
+                <span class="material-symbols-outlined text-[15px]">error</span>
+                <span>{{ password_form.current_password.errors.0 }}</span>
+              </p>
+            {% endif %}
+          </div>
+
+          <!-- Campo: Nueva Contraseña -->
+          <div class="flex flex-col gap-2">
+            <label for="id_new_password1" class="text-xs sm:text-sm font-semibold text-on-surface flex items-center justify-between">
+              <span>Nueva Contraseña <span class="text-error">*</span></span>
+              <span class="text-[11px] text-outline font-normal">Mínimo 8 caracteres</span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">lock</span>
+              <input 
+                type="password"
+                name="new_password1"
+                id="id_new_password1"
+                placeholder="••••••••••••"
+                autocomplete="new-password"
+                required
+                {% if password_form.new_password1.errors %}aria-invalid="true"{% endif %}
+                class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline text-sm pl-12 pr-4 rounded-2xl border {% if password_form.new_password1.errors %}border-error text-error focus:border-error focus:ring-2 focus:ring-error/20{% else %}border-outline-variant/40 focus:border-primary focus:ring-2 focus:ring-primary/20{% endif %} focus:outline-none transition-all shadow-2xs"
+              >
+            </div>
+            {% if password_form.new_password1.errors %}
+              <p role="alert" aria-live="polite" class="text-xs text-error font-medium flex items-center gap-1.5 mt-1">
+                <span class="material-symbols-outlined text-[15px]">error</span>
+                <span>{{ password_form.new_password1.errors.0 }}</span>
+              </p>
+            {% endif %}
+          </div>
+
+          <!-- Campo: Confirmar Nueva Contraseña -->
+          <div class="flex flex-col gap-2">
+            <label for="id_new_password2" class="text-xs sm:text-sm font-semibold text-on-surface flex items-center justify-between">
+              <span>Confirmar Nueva Contraseña <span class="text-error">*</span></span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">lock_clock</span>
+              <input 
+                type="password"
+                name="new_password2"
+                id="id_new_password2"
+                placeholder="••••••••••••"
+                autocomplete="new-password"
+                required
+                {% if password_form.new_password2.errors %}aria-invalid="true"{% endif %}
+                class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline text-sm pl-12 pr-4 rounded-2xl border {% if password_form.new_password2.errors %}border-error text-error focus:border-error focus:ring-2 focus:ring-error/20{% else %}border-outline-variant/40 focus:border-primary focus:ring-2 focus:ring-primary/20{% endif %} focus:outline-none transition-all shadow-2xs"
+              >
+            </div>
+            {% if password_form.new_password2.errors %}
+              <p role="alert" aria-live="polite" class="text-xs text-error font-medium flex items-center gap-1.5 mt-1">
+                <span class="material-symbols-outlined text-[15px]">error</span>
+                <span>{{ password_form.new_password2.errors.0 }}</span>
+              </p>
+            {% endif %}
+          </div>
+
+          <!-- Botón Actualizar Contraseña -->
+          <div class="pt-4">
+            <button 
+              type="submit"
+              class="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-surface-container-highest text-primary font-bold text-sm border border-outline-variant/40 hover:bg-surface-container-high active:scale-[0.98] transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            >
+              <span class="material-symbols-outlined text-[19px]">verified_user</span>
+              <span>Actualizar Contraseña</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

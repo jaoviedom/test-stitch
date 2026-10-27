@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Producto · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Page Header Breadcrumbs & Action -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-outline-variant/30">
+    <div class="flex flex-col">
+      <div class="flex items-center gap-2 text-xs text-outline mb-1">
+        <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+        <span>/</span>
+        <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Productos</a>
+        <span>/</span>
+        <span class="text-on-surface font-medium">Nuevo Producto</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-on-surface flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-primary text-[28px]">add_circle</span>
+        Registrar Nuevo Producto
+      </h1>
+      <p class="text-sm text-outline mt-0.5">
+        Crea un producto con sus especificaciones, precios y existencias físicas para el inventario de la tienda.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'dashboard' %}"
+         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container text-on-surface text-sm font-medium transition-all">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Volver al Listado
+      </a>
+    </div>
+  </div>
+
+  <!-- Notificación flash con auto-fade a los 5 segundos y botón de cierre -->
+  {% if messages %}
+  <div id="flash-message-container" class="space-y-3 transition-opacity duration-500">
+    {% for message in messages %}
+    <div id="alert-msg-{{ forloop.counter }}" role="status" class="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium text-sm shadow-xs transition-opacity duration-300">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-[20px]">check_circle</span>
+        <span>{{ message }}</span>
+      </div>
+      <button type="button" onclick="cerrarAlerta('alert-msg-{{ forloop.counter }}')" class="p-1 rounded-lg hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors" aria-label="Cerrar mensaje">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Form Card -->
+  <div class="rounded-2xl border border-outline-variant/30 bg-surface-container p-6 lg:p-8 shadow-sm">
+    <form method="post" action="{% url 'inventario:crear_producto' %}" enctype="multipart/form-data" class="space-y-6" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div role="alert" aria-live="polite" class="p-4 rounded-xl bg-error/15 border border-error/30 text-error text-sm font-medium flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-[20px]">error</span>
+        <span>{{ form.non_field_errors.0 }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Campo: Nombre -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="id_nombre" class="block text-sm font-semibold text-on-surface">
+            Nombre del Producto <span class="text-rose-500">*</span>
+          </label>
+          <span class="text-xs text-outline font-mono">Máx. 100 caracteres</span>
+        </div>
+        <div class="relative">
+          <input type="text"
+                 name="nombre"
+                 id="id_nombre"
+                 value="{{ form.nombre.value|default:'' }}"
+                 placeholder="Ej. Coca Cola 1.5L"
+                 maxlength="100"
+                 required
+                 autocomplete="off"
+                 {% if form.nombre.errors %}aria-invalid="true"{% endif %}
+                 class="w-full py-2.5 px-3.5 text-sm rounded-xl border {% if form.nombre.errors %}border-rose-500 focus:border-rose-600 focus:ring-rose-500/20 bg-rose-500/5{% else %}border-outline-variant/50 focus:border-emerald-600 focus:ring-emerald-600/20 bg-surface-container-low{% endif %} text-on-surface placeholder-outline focus:outline-none focus:ring-2 transition-all">
+        </div>
+        {% if form.nombre.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          {{ form.nombre.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Campo: Categoría (Relación 1:N) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="id_categoria" class="block text-sm font-semibold text-on-surface">
+            Categoría <span class="text-rose-500">*</span>
+          </label>
+          <span class="text-xs text-outline font-sans">Selección con autocompletado</span>
+        </div>
+        <div class="relative">
+          <select name="categoria"
+                  id="id_categoria"
+                  required
+                  {% if form.categoria.errors %}aria-invalid="true"{% endif %}
+                  class="w-full py-2.5 px-3.5 text-sm rounded-xl border {% if form.categoria.errors %}border-rose-500 focus:border-rose-600 focus:ring-rose-500/20 bg-rose-500/5{% else %}border-outline-variant/50 focus:border-emerald-600 focus:ring-emerald-600/20 bg-surface-container-low{% endif %} text-on-surface focus:outline-none focus:ring-2 transition-all">
+            <option value="">Seleccione una categoría</option>
+            {% for opt in form.fields.categoria.queryset %}
+            <option value="{{ opt.pk }}" {% if form.categoria.value|stringformat:"s" == opt.pk|stringformat:"s" %}selected{% endif %}>
+              {{ opt.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if form.categoria.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          {{ form.categoria.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Precios y Existencias -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        <!-- Precio Compra -->
+        <div class="space-y-1.5">
+          <label for="id_precio_compra" class="block text-sm font-semibold text-on-surface">
+            Precio Compra <span class="text-rose-500">*</span>
+          </label>
+          <div class="flex items-center rounded-xl border {% if form.precio_compra.errors %}border-rose-500 bg-rose-500/5 focus-within:ring-rose-500/20 focus-within:border-rose-500{% else %}border-outline-variant/50 bg-surface-container-low focus-within:ring-emerald-600/20 focus-within:border-emerald-600{% endif %} focus-within:ring-2 transition-all overflow-hidden px-3.5">
+            <span class="text-outline font-mono text-sm font-semibold select-none pointer-events-none mr-2">$</span>
+            <input type="text"
+                   name="precio_compra"
+                   id="id_precio_compra"
+                   inputmode="numeric"
+                   autocomplete="off"
+                   placeholder="0"
+                   value="{{ form.precio_compra.value|default:'' }}"
+                   required
+                   {% if form.precio_compra.errors %}aria-invalid="true"{% endif %}
+                   class="w-full py-2.5 text-sm font-mono tabular-nums bg-transparent text-on-surface placeholder-outline focus:outline-none">
+          </div>
+          {% if form.precio_compra.errors %}
+          <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1 font-medium">{{ form.precio_compra.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Precio Venta -->
+        <div class="space-y-1.5">
+          <label for="id_precio_venta" class="block text-sm font-semibold text-on-surface">
+            Precio Venta <span class="text-rose-500">*</span>
+          </label>
+          <div class="flex items-center rounded-xl border {% if form.precio_venta.errors %}border-rose-500 bg-rose-500/5 focus-within:ring-rose-500/20 focus-within:border-rose-500{% else %}border-outline-variant/50 bg-surface-container-low focus-within:ring-emerald-600/20 focus-within:border-emerald-600{% endif %} focus-within:ring-2 transition-all overflow-hidden px-3.5">
+            <span class="text-outline font-mono text-sm font-semibold select-none pointer-events-none mr-2">$</span>
+            <input type="text"
+                   name="precio_venta"
+                   id="id_precio_venta"
+                   inputmode="numeric"
+                   autocomplete="off"
+                   placeholder="0"
+                   value="{{ form.precio_venta.value|default:'' }}"
+                   required
+                   {% if form.precio_venta.errors %}aria-invalid="true"{% endif %}
+                   class="w-full py-2.5 text-sm font-mono tabular-nums bg-transparent text-on-surface placeholder-outline focus:outline-none">
+          </div>
+          {% if form.precio_venta.errors %}
+          <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1 font-medium">{{ form.precio_venta.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Stock Actual -->
+        <div class="space-y-1.5">
+          <label for="id_stock_actual" class="block text-sm font-semibold text-on-surface">
+            Stock Actual <span class="text-rose-500">*</span>
+          </label>
+          <input type="number"
+                 name="stock_actual"
+                 id="id_stock_actual"
+                 step="1"
+                 min="0"
+                 value="{{ form.stock_actual.value|default:'0' }}"
+                 required
+                 {% if form.stock_actual.errors %}aria-invalid="true"{% endif %}
+                 class="w-full py-2.5 px-3.5 text-sm font-mono tabular-nums rounded-xl border {% if form.stock_actual.errors %}border-rose-500 bg-rose-500/5{% else %}border-outline-variant/50 bg-surface-container-low{% endif %} text-on-surface focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all">
+          {% if form.stock_actual.errors %}
+          <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1 font-medium">{{ form.stock_actual.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Stock Mínimo -->
+        <div class="space-y-1.5">
+          <label for="id_stock_minimo" class="block text-sm font-semibold text-on-surface">
+            Stock Mínimo <span class="text-rose-500">*</span>
+          </label>
+          <input type="number"
+                 name="stock_minimo"
+                 id="id_stock_minimo"
+                 step="1"
+                 min="0"
+                 value="{{ form.stock_minimo.value|default:'0' }}"
+                 required
+                 {% if form.stock_minimo.errors %}aria-invalid="true"{% endif %}
+                 class="w-full py-2.5 px-3.5 text-sm font-mono tabular-nums rounded-xl border {% if form.stock_minimo.errors %}border-rose-500 bg-rose-500/5{% else %}border-outline-variant/50 bg-surface-container-low{% endif %} text-on-surface focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all">
+          {% if form.stock_minimo.errors %}
+          <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1 font-medium">{{ form.stock_minimo.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Campo: Descripción -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="id_descripcion" class="block text-sm font-semibold text-on-surface">
+            Descripción (Opcional)
+          </label>
+          <span class="text-xs text-outline font-mono">Máx. 500 caracteres</span>
+        </div>
+        <textarea name="descripcion"
+                  id="id_descripcion"
+                  rows="3"
+                  placeholder="Detalles sobre presentación, especificaciones o marca del producto..."
+                  maxlength="500"
+                  {% if form.descripcion.errors %}aria-invalid="true"{% endif %}
+                  class="w-full py-2.5 px-3.5 text-sm rounded-xl border {% if form.descripcion.errors %}border-rose-500 focus:border-rose-600 focus:ring-rose-500/20 bg-rose-500/5{% else %}border-outline-variant/50 focus:border-emerald-600 focus:ring-emerald-600/20 bg-surface-container-low{% endif %} text-on-surface placeholder-outline focus:outline-none focus:ring-2 transition-all">{{ form.descripcion.value|default:'' }}</textarea>
+        {% if form.descripcion.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          {{ form.descripcion.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Campo: Imagen con Drag and Drop Dropzone -->
+      <div class="space-y-1.5">
+        <label for="id_imagen" class="block text-sm font-semibold text-on-surface">
+          Imagen del Producto (Opcional)
+        </label>
+        
+        <!-- Input nativo accesible pero oculto para drag/drop y selector visual -->
+        <input type="file"
+               name="imagen"
+               id="id_imagen"
+               accept="image/jpeg,image/png,image/webp,image/jpg"
+               class="sr-only"
+               onchange="previsualizarMiniatura(event)">
+
+        <!-- Dropzone Container -->
+        <div id="dropzone-container"
+             tabindex="0"
+             role="button"
+             aria-label="Subir imagen del producto"
+             onclick="handleDropzoneClick(event)"
+             onkeydown="handleDropzoneKeyDown(event)"
+             class="relative border-2 border-dashed border-outline-variant/60 hover:border-emerald-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl p-6 bg-surface-container-low transition-all cursor-pointer group outline-none select-none">
+          
+          <!-- Estado Vacío (Basado exactamente en la imagen de referencia) -->
+          <div id="dropzone-empty-state" class="{% if producto and producto.imagen %}hidden{% endif %} flex flex-col items-center justify-center text-center py-4">
+            <!-- Icono de nube con flecha hacia arriba -->
+            <div class="w-12 h-12 rounded-full bg-surface-container-high/70 group-hover:bg-emerald-500/10 flex items-center justify-center mb-3 transition-colors text-outline group-hover:text-emerald-600">
+              <span class="material-symbols-outlined text-[28px]">cloud_upload</span>
+            </div>
+            
+            <!-- Texto principal y subtexto -->
+            <p class="text-sm font-medium text-on-surface">
+              Sube tus archivos <span class="underline font-semibold text-emerald-600 group-hover:text-emerald-700 decoration-2 underline-offset-2">aquí</span>
+            </p>
+            <p class="text-xs text-outline mt-1">
+              O puedes arrastrar y soltar tu archivo
+            </p>
+            <p class="text-[11px] text-outline/70 mt-2 font-mono">
+              JPG, PNG o WEBP (Máx. 5MB)
+            </p>
+          </div>
+
+          <!-- Estado con Vista Previa (Miniatura) -->
+          <div id="dropzone-preview-state" class="{% if not producto or not producto.imagen %}hidden{% endif %} flex flex-col sm:flex-row items-center justify-between gap-4 p-2 bg-surface-container/60 rounded-xl border border-outline-variant/30">
+            <div class="flex items-center gap-3.5 w-full sm:w-auto">
+              <!-- Miniatura -->
+              <div class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-surface-container border border-outline-variant/40 overflow-hidden shrink-0 shadow-xs">
+                <img id="imagen-preview"
+                     src="{% if producto and producto.imagen %}{{ producto.imagen.url }}{% endif %}"
+                     alt="Miniatura del producto"
+                     class="w-full h-full object-cover">
+              </div>
+              
+              <!-- Información de archivo -->
+              <div class="flex-1 min-w-0 text-left">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <span class="material-symbols-outlined text-[13px]">check_circle</span>
+                    Imagen seleccionada
+                  </span>
+                </div>
+                <p id="imagen-filename" class="text-xs font-semibold text-on-surface truncate max-w-[200px] sm:max-w-[260px] mt-1 font-mono">
+                  {% if producto and producto.imagen %}{{ producto.nombre }}{% else %}imagen-seleccionada.jpg{% endif %}
+                </p>
+                <p id="imagen-filesize" class="text-[11px] text-outline font-mono mt-0.5">
+                  Listo para guardar
+                </p>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/20">
+              <button type="button"
+                      id="btn-cambiar-imagen"
+                      onclick="event.stopPropagation(); document.getElementById('id_imagen').click();"
+                      class="px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-high hover:bg-surface-container-highest text-xs font-medium text-on-surface inline-flex items-center gap-1 transition-colors cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">sync</span>
+                Cambiar
+              </button>
+              <button type="button"
+                      id="btn-eliminar-imagen"
+                      onclick="event.stopPropagation(); eliminarMiniatura();"
+                      class="px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-600 inline-flex items-center gap-1 transition-colors cursor-pointer">
+                <span class="material-symbols-outlined text-[15px]">delete</span>
+                Quitar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {% if form.imagen.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1 font-medium flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">error</span>
+          {{ form.imagen.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Campo: Activo -->
+      <div class="pt-2">
+        <div class="p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low flex items-start gap-3.5 hover:border-outline-variant/50 transition-colors">
+          <div class="flex items-center h-5">
+            <input type="checkbox"
+                   name="activo"
+                   id="id_activo"
+                   {% if form.activo.value or form.activo.value is None %}checked{% endif %}
+                   class="w-4 h-4 rounded border-outline-variant/60 text-emerald-600 focus:ring-emerald-500 bg-surface-container focus:ring-2 cursor-pointer transition-colors">
+          </div>
+          <div class="flex flex-col">
+            <label for="id_activo" class="text-sm font-semibold text-on-surface cursor-pointer">
+              Producto Activo para Venta
+            </label>
+            <p class="text-xs text-outline mt-0.5">
+              Al estar activo, estará disponible de inmediato en el catálogo y terminal de punto de venta (POS).
+            </p>
+          </div>
+        </div>
+        {% if form.activo.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium">
+          {{ form.activo.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Actions Footer -->
+      <div class="pt-4 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-end gap-3">
+        <a href="{% url 'dashboard' %}"
+           class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container-high text-on-surface text-sm font-medium text-center transition-colors">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-all">
+          <span class="material-symbols-outlined text-[20px]">save</span>
+          Guardar Producto
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Desvanecimiento suave automático de alertas tras 5 segundos
+  setTimeout(function() {
+    const container = document.getElementById('flash-message-container');
+    if (container) {
+      container.style.opacity = '0';
+      setTimeout(() => {
+        container.style.display = 'none';
+      }, 500);
+    }
+  }, 5000);
+
+  function cerrarAlerta(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.remove();
+      }, 300);
+    }
+  }
+
+  // Formateador de precios en vivo: sin decimales y con punto (.) como separador de miles
+  function formatMilesString(val) {
+    if (!val) return '';
+    const digits = String(val).replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  function setupCurrencyInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    // Normalizar valor inicial eliminando decimales (ej. 3500.00 -> 3.500)
+    if (input.value) {
+      const cleanVal = input.value.split('.')[0].split(',')[0];
+      input.value = formatMilesString(cleanVal);
+    }
+
+    input.addEventListener('input', function() {
+      const cursorPosition = this.selectionStart || 0;
+      const prevLength = this.value.length;
+      
+      const formatted = formatMilesString(this.value);
+      this.value = formatted;
+
+      const diff = formatted.length - prevLength;
+      const newPos = Math.max(0, cursorPosition + diff);
+      this.setSelectionRange(newPos, newPos);
+    });
+  }
+
+  // Manejo de Dropzone: Clic y Accesibilidad Teclado
+  function handleDropzoneClick(e) {
+    // Si se hizo clic en un botón de acción (cambiar, quitar), no reabrir el selector general
+    if (e.target.closest('#btn-cambiar-imagen') || e.target.closest('#btn-eliminar-imagen')) {
+      return;
+    }
+    const input = document.getElementById('id_imagen');
+    if (input) input.click();
+  }
+
+  function handleDropzoneKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const input = document.getElementById('id_imagen');
+      if (input) input.click();
+    }
+  }
+
+  // Soporte Drag and Drop nativo
+  document.addEventListener('DOMContentLoaded', function() {
+    setupCurrencyInput('id_precio_compra');
+    setupCurrencyInput('id_precio_venta');
+
+    const dropzone = document.getElementById('dropzone-container');
+    const fileInput = document.getElementById('id_imagen');
+
+    if (dropzone && fileInput) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add('border-emerald-500', 'bg-emerald-500/10', 'ring-2', 'ring-emerald-500/20');
+        });
+      });
+
+      ['dragleave', 'dragend'].forEach(eventName => {
+        dropzone.addEventListener(eventName, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove('border-emerald-500', 'bg-emerald-500/10', 'ring-2', 'ring-emerald-500/20');
+        });
+      });
+
+      dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('border-emerald-500', 'bg-emerald-500/10', 'ring-2', 'ring-emerald-500/20');
+
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const files = e.dataTransfer.files;
+          const file = files[0];
+          if (file.type.startsWith('image/')) {
+            try {
+              fileInput.files = files;
+            } catch (err) {
+              // Fallback para navegadores antiguos si fileInput.files es de solo lectura
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              fileInput.files = dt.files;
+            }
+            mostrarArchivoMiniatura(file);
+          }
+        }
+      });
+    }
+  });
+
+  // Mostrar información de archivo y miniatura
+  function mostrarArchivoMiniatura(file) {
+    const preview = document.getElementById('imagen-preview');
+    const emptyState = document.getElementById('dropzone-empty-state');
+    const previewState = document.getElementById('dropzone-preview-state');
+    const filenameEl = document.getElementById('imagen-filename');
+    const filesizeEl = document.getElementById('imagen-filesize');
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        if (preview) {
+          preview.src = e.target.result;
+        }
+        if (filenameEl) {
+          filenameEl.textContent = file.name;
+        }
+        if (filesizeEl) {
+          const sizeKb = (file.size / 1024).toFixed(1);
+          filesizeEl.textContent = `${sizeKb} KB - Listo para guardar`;
+        }
+        if (emptyState) emptyState.classList.add('hidden');
+        if (previewState) previewState.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Previsualización de miniatura de imagen desde input[type=file]
+  function previsualizarMiniatura(event) {
+    const input = event.target;
+    if (input.files && input.files[0]) {
+      mostrarArchivoMiniatura(input.files[0]);
+    }
+  }
+
+  // Eliminar selección de miniatura
+  function eliminarMiniatura() {
+    const input = document.getElementById('id_imagen');
+    const preview = document.getElementById('imagen-preview');
+    const emptyState = document.getElementById('dropzone-empty-state');
+    const previewState = document.getElementById('dropzone-preview-state');
+
+    if (input) input.value = '';
+    if (preview) preview.src = '';
+    if (previewState) previewState.classList.add('hidden');
+    if (emptyState) emptyState.classList.remove('hidden');
+  }
+</script>
+{% endblock %}

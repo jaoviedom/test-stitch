@@ -1,0 +1,198 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TeckStore Admin Dashboard - Panel de administración y control operativo">
+  <title>{% block title %}TeckStore Admin Dashboard{% endblock %}</title>
+
+  <!-- Inline script to prevent FOUC / early theme sync -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('teckstore_theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <!-- Local Tailwind CSS v4 & Local Fonts (Plus Jakarta Sans & Material Symbols) -->
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v=2">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container transition-colors duration-200">
+
+  <!-- Floating Reusable Sidebar Component -->
+  {% include "components/sidebar.html" %}
+
+  <!-- Mobile Drawer Backdrop Overlay -->
+  <div id="drawer-backdrop" class="fixed inset-0 bg-surface-container-lowest/80 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>
+
+  <!-- Main Content Wrapper (Pushed right on desktop for floating sidebar) -->
+  <div class="lg:pl-[17.5rem] flex flex-col flex-1 min-h-screen">
+    
+    <!-- Global Header Component -->
+    {% include "components/header.html" %}
+
+    <!-- System Flash Messages (Django Messages Framework) -->
+    {% if messages %}
+    <div class="px-4 lg:px-8 pt-4">
+      <div class="flex flex-col gap-2">
+        {% for message in messages %}
+        <div class="flex items-center gap-3 p-3.5 rounded-xl border {% if message.tags == 'error' %}bg-error/15 border-error/30 text-error{% elif message.tags == 'success' %}bg-secondary/15 border-secondary/30 text-secondary{% elif message.tags == 'warning' %}bg-tertiary/15 border-tertiary/30 text-tertiary{% else %}bg-primary-container/20 border-primary/30 text-primary{% endif %} shadow-sm text-sm font-medium">
+          <span class="material-symbols-outlined text-[20px]">
+            {% if message.tags == 'error' %}error{% elif message.tags == 'success' %}check_circle{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}
+          </span>
+          <span class="flex-1">{{ message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Page Body Container -->
+    <main class="flex-1 w-full p-4 lg:p-8 bg-background">
+      {% block content %}
+      {% endblock %}
+    </main>
+
+    <!-- Global Minimal Footer -->
+    <footer class="w-full px-4 lg:px-8 py-4 border-t border-outline-variant/15 text-xs text-outline flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-on-surface">TeckStore Admin</span>
+        <span>•</span>
+        <span>Tecnología e Inventario de Alto Rendimiento</span>
+      </div>
+      <div>
+        <span>&copy; {% now "Y" %} TeckStore Inc. Todos los derechos reservados.</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Core Layout Interactions Script (Theme, Mobile Drawer, Menus) -->
+  <script>
+    (function() {
+      // 1. Theme toggle management (Interactive switch with smooth transition)
+      const themeToggle = document.getElementById('theme-toggle');
+      const themeKnob = document.getElementById('theme-knob');
+      const themeKnobIcon = document.getElementById('theme-knob-icon');
+      const rootHtml = document.documentElement;
+
+      function updateThemeUI(isDark) {
+        if (isDark) {
+          rootHtml.classList.add('dark');
+          localStorage.setItem('teckstore_theme', 'dark');
+          if (themeKnob) {
+            themeKnob.classList.remove('translate-x-0', 'bg-amber-400', 'text-amber-950');
+            themeKnob.classList.add('translate-x-9', 'bg-primary-container', 'text-on-primary-container');
+          }
+          if (themeKnobIcon) {
+            themeKnobIcon.textContent = 'dark_mode';
+          }
+          if (themeToggle) {
+            themeToggle.setAttribute('aria-checked', 'true');
+            themeToggle.setAttribute('title', 'Modo Oscuro activo (clic para cambiar a Modo Claro)');
+          }
+        } else {
+          rootHtml.classList.remove('dark');
+          localStorage.setItem('teckstore_theme', 'light');
+          if (themeKnob) {
+            themeKnob.classList.remove('translate-x-9', 'bg-primary-container', 'text-on-primary-container');
+            themeKnob.classList.add('translate-x-0', 'bg-amber-400', 'text-amber-950');
+          }
+          if (themeKnobIcon) {
+            themeKnobIcon.textContent = 'light_mode';
+          }
+          if (themeToggle) {
+            themeToggle.setAttribute('aria-checked', 'false');
+            themeToggle.setAttribute('title', 'Modo Claro activo (clic para cambiar a Modo Oscuro)');
+          }
+        }
+      }
+
+      // Initial state sync based on active rootHtml class
+      updateThemeUI(rootHtml.classList.contains('dark'));
+
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const isCurrentlyDark = rootHtml.classList.contains('dark');
+          updateThemeUI(!isCurrentlyDark);
+        });
+      }
+
+      // 2. Mobile Sidebar Drawer Logic
+      const openBtn = document.getElementById('open-sidebar-btn');
+      const closeBtn = document.getElementById('close-sidebar-btn');
+      const drawer = document.getElementById('sidebar-drawer');
+      const backdrop = document.getElementById('drawer-backdrop');
+
+      function openDrawer() {
+        if (drawer && backdrop) {
+          drawer.classList.remove('-translate-x-[calc(100%+2rem)]');
+          backdrop.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+      }
+
+      function closeDrawer() {
+        if (drawer && backdrop) {
+          drawer.classList.add('-translate-x-[calc(100%+2rem)]');
+          backdrop.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+      }
+
+      if (openBtn) openBtn.addEventListener('click', openDrawer);
+      if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+      if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+      // 3. User Dropdown Menu Logic
+      const userBtn = document.getElementById('user-menu-button');
+      const userMenu = document.getElementById('user-dropdown-menu');
+      const userChevron = document.getElementById('user-menu-chevron');
+
+      if (userBtn && userMenu) {
+        userBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isHidden = userMenu.classList.contains('hidden');
+          if (isHidden) {
+            userMenu.classList.remove('hidden');
+            userMenu.classList.add('flex');
+            if (userChevron) userChevron.classList.add('rotate-180');
+          } else {
+            userMenu.classList.add('hidden');
+            userMenu.classList.remove('flex');
+            if (userChevron) userChevron.classList.remove('rotate-180');
+          }
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!userBtn.contains(e.target) && !userMenu.contains(e.target)) {
+            userMenu.classList.add('hidden');
+            userMenu.classList.remove('flex');
+            if (userChevron) userChevron.classList.remove('rotate-180');
+          }
+        });
+      }
+
+      // 4. Quick Search shortcut (Cmd+K / Ctrl+K)
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          const searchInput = document.getElementById('global-search-input');
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      });
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

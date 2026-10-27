@@ -1,0 +1,361 @@
+module: auth
+user_stories:
+  - id: HU-001
+    slug: registro-rol-usuario
+    title: Registro de usuario con rol base por defecto
+  - id: HU-002
+    slug: gestionar-roles-permisos
+    title: Gestión de múltiples roles y permisos por el Administrador
+  - id: HU-003
+    slug: login
+    title: Inicio de Sesión Seguro (Login)
+  - id: HU-004
+    slug: consulta-actualizacion-perfil-usuario
+    title: Consulta y Actualización de Perfil de Usuario
+
+
+backend:
+  app_name: authentication
+  permissions:
+    - app_label: authentication
+      codename: manage_access
+      name: Puede gestionar roles y permisos de usuarios
+
+  models:
+    - name: User
+      module: django.contrib.auth.models
+      description: Modelo estándar de usuario de Django.
+      relations:
+        - name: groups
+          type: ManyToManyField(Group)
+          description: Grupos a los que pertenece el usuario (roles).
+        - name: user_permissions
+          type: ManyToManyField(Permission)
+          description: Permisos directos asignados específicamente al usuario.
+
+    - name: Group
+      module: django.contrib.auth.models
+      description: Modelo estándar de grupos de Django usado como roles del sistema.
+      official_records:
+        - name: usuario
+          permissions: []
+          description: Rol base por defecto sin acceso a módulos operativos ni administrativos.
+        - name: vendedor
+          permissions: [inventario.view_categoria, inventario.view_producto, inventario.access_pos]
+          description: Operador comercial de punto de venta y catálogo.
+        - name: administrador
+          permissions: [authentication.manage_access, auth.view_user, inventario.view_categoria, inventario.add_categoria, inventario.change_categoria, inventario.view_producto, inventario.add_producto, inventario.change_producto, inventario.access_pos]
+          description: Control total del sistema y gestión de accesos.
+
+    - name: AccessControl
+      module: authentication.models
+      description: Modelo auxiliar para registrar permisos personalizados de administración.
+      meta_permissions:
+        - codename: manage_access
+          name: Puede gestionar roles y permisos de usuarios
+
+  services:
+    - class_name: RegisterUserService
+      module: authentication.services
+      method: execute
+      transactional: true
+      signature:
+        parameters:
+          - name: first_name
+            type: str
+          - name: username
+            type: str
+          - name: email
+            type: str
+          - name: password
+            type: str
+        returns: django.contrib.auth.models.User
+
+    - class_name: UpdateUserAccessService
+      module: authentication.services
+      method: execute
+      transactional: true
+      signature:
+        parameters:
+          - name: target_user
+            type: django.contrib.auth.models.User
+          - name: role_names
+            type: list[str]
+          - name: permission_codenames
+            type: list[str]
+            optional: true
+          - name: requested_by
+            type: django.contrib.auth.models.User
+            optional: true
+        returns: django.contrib.auth.models.User
+      logic:
+        1: Ejecutar bajo @transaction.atomic.
+        2: Si requested_by está presente, validar que posea el permiso 'authentication.manage_access'; de lo contrario levantar PermissionDenied.
+        3: Buscar instancias de Group para cada nombre en role_names y sincronizar con target_user.groups.set(grupos).
+        4: Si se especifica permission_codenames, buscar instancias de Permission y sincronizar con target_user.user_permissions.set(permisos).
+        5: Retornar target_user actualizado.
+
+    - class_name: AuthenticateUserService
+      module: authentication.services
+      method: execute
+      transactional: false
+      signature:
+        parameters:
+          - name: identifier
+            type: str
+            description: Nombre de usuario o correo electrónico (insensible a mayúsculas/minúsculas).
+          - name: password
+            type: str
+            description: Contraseña en texto plano a verificar.
+          - name: request
+            type: django.http.HttpRequest
+            optional: true
+            description: Request HTTP para pasar a authenticate().
+        returns: Optional[django.contrib.auth.models.User]
+      logic:
+        1: Limpiar y normalizar el identificador (strip).
+        2: Buscar en User con Q(username__iexact=identifier) | Q(email__iexact=identifier).
+        3: Si se encuentra el usuario, invocar django.contrib.auth.authenticate(request=request, username=user.username, password=password).
+        4: Si no se encuentra, retornar None sin revelar existencia.
+
+    - class_name: UpdateUserProfileService
+      module: authentication.services
+      method: execute
+      transactional: true
+      signature:
+        parameters:
+          - name: user
+            type: django.contrib.auth.models.User
+          - name: first_name
+            type: str
+          - name: email
+            type: str
+          - name: last_name
+            type: str
+            optional: true
+            default: ""
+        returns: django.contrib.auth.models.User
+      logic:
+        1: Ejecutar bajo @transaction.atomic.
+        2: Actualizar user.first_name = first_name.strip() y user.email = email.strip().
+        3: Si se provee last_name, actualizar user.last_name = last_name.strip().
+        4: Invocar user.save(update_fields=['first_name', 'last_name', 'email']).
+        5: Garantizar inmutabilidad de roles: prohibido alterar grupos, permisos o flags administrativos.
+        6: Retornar la instancia de user actualizada.
+
+    - class_name: UpdateUserPasswordService
+      module: authentication.services
+      method: execute
+      transactional: true
+      signature:
+        parameters:
+          - name: user
+            type: django.contrib.auth.models.User
+          - name: current_password
+            type: str
+          - name: new_password
+            type: str
+        returns: None
+      logic:
+        1: Ejecutar bajo @transaction.atomic.
+        2: Validar user.check_password(current_password). Si falla, lanzar ValidationError con mensaje apropiado.
+        3: Validar new_password usando django.contrib.auth.password_validation.validate_password(new_password, user=user).
+        4: Aplicar user.set_password(new_password).
+        5: Invocar user.save(update_fields=['password']).
+
+  forms:
+    - class_name: UserRegistrationForm
+      module: authentication.forms
+      fields: [first_name, username, email, password1, password2, terms]
+
+
+    - class_name: UpdateUserAccessForm
+      module: authentication.forms
+      fields:
+        - name: roles
+          type: forms.ModelMultipleChoiceField(queryset=Group.objects.all(), widget=CheckboxSelectMultiple)
+          required: false
+        - name: permissions
+          type: forms.ModelMultipleChoiceField(queryset=Permission.objects.filter(...), widget=CheckboxSelectMultiple)
+          required: false
+      validations:
+        - clean_roles: Permitir selección de múltiples roles o mantener al menos 'usuario'.
+
+    - class_name: LoginForm
+      module: authentication.forms
+      fields:
+        - name: username
+          type: forms.CharField
+          label: Usuario o Correo
+          required: true
+          widget: forms.TextInput
+        - name: password
+          type: forms.CharField
+          label: Contraseña
+          required: true
+          widget: forms.PasswordInput
+        - name: remember_me
+          type: forms.BooleanField
+          label: Recordar este dispositivo por 30 días
+          required: false
+          widget: forms.CheckboxInput
+      validations:
+        - clean: Validar presencia de campos y delegar autenticación al servicio o vista, asignando error genérico accesible si falla.
+
+    - class_name: UserProfileForm
+      module: authentication.forms
+      fields:
+        - name: first_name
+          type: forms.CharField
+          label: Nombre Completo
+          required: true
+          max_length: 150
+        - name: email
+          type: forms.EmailField
+          label: Correo Electrónico
+          required: true
+      validations:
+        - clean_email: Validar que el email no pertenezca a otra cuenta registrada excluyendo la cuenta actual (User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists()).
+
+    - class_name: UserPasswordChangeForm
+      module: authentication.forms
+      fields:
+        - name: current_password
+          type: forms.CharField
+          label: Contraseña Actual
+          required: true
+          widget: forms.PasswordInput
+        - name: new_password1
+          type: forms.CharField
+          label: Nueva Contraseña
+          required: true
+          widget: forms.PasswordInput
+        - name: new_password2
+          type: forms.CharField
+          label: Confirmar Nueva Contraseña
+          required: true
+          widget: forms.PasswordInput
+      validations:
+        - clean_current_password: Validar que user.check_password(current_password) sea True; de lo contrario generar error accesible.
+        - clean: Validar que new_password1 y new_password2 coincidan y pasar por validate_password de Django.
+
+  routing_and_views:
+    - path: /auth/register/
+      name: authentication:register
+      view: authentication.views.register_view
+      http_methods: [GET, POST]
+      auth_required: false
+
+    - path: /auth/login/
+      name: authentication:login
+      view: authentication.views.login_view
+      http_methods: [GET, POST]
+      auth_required: false
+      behavior:
+        GET:
+          - Si request.user.is_authenticated == True, redirigir inmediatamente a 'inventario:dashboard'.
+          - Renderizar authentication/login.html con LoginForm vacío o capturando parámetro 'next'.
+        POST:
+          - Si el usuario ya está autenticado, redirigir a 'inventario:dashboard'.
+          - Validar LoginForm. Si es inválido o AuthenticateUserService retorna None, renderizar HTTP 200 con mensaje genérico accesible en non_field_errors ("Nombre de usuario, correo o contraseña incorrectos.").
+          - Si es válido, ejecutar login(request, user).
+          - Si remember_me está marcado, no alterar la expiración predeterminada (o fijar 30 días = 2592000s); si no está marcado, ejecutar request.session.set_expiry(0).
+          - Validar parámetro 'next' usando url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}). Si es seguro, redirigir a next_url; de lo contrario redirigir a 'inventario:dashboard'.
+          - Registrar mensaje flash accesible de bienvenida con messages.success.
+
+    - path: /auth/logout/
+      name: authentication:logout
+      view: authentication.views.logout_view
+      http_methods: [POST]
+      auth_required: true
+
+    - path: /auth/usuarios/
+      name: authentication:user_list
+      view: authentication.views.user_list_view
+      http_methods: [GET]
+      auth_required: true
+      permissions_required: [authentication.manage_access]
+      behavior:
+        GET: Renderizar listado de usuarios con sus roles y badges. Redirigir a login si anónimo (302) o retornar 403 si carece de permiso.
+
+    - path: /auth/usuarios/<int:user_id>/accesos/
+      name: authentication:user_manage_access
+      view: authentication.views.user_manage_access_view
+      http_methods: [GET, POST]
+      auth_required: true
+      permissions_required: [authentication.manage_access]
+      behavior:
+        GET: Renderizar formulario de edición de accesos para el usuario especificado.
+        POST: Procesar UpdateUserAccessForm y ejecutar UpdateUserAccessService. Redirigir a authentication:user_list con mensaje flash.
+
+    - path: /auth/perfil/
+      name: authentication:profile
+      view: authentication.views.profile_view
+      http_methods: [GET, POST]
+      auth_required: true
+      behavior:
+        GET:
+          - Redirigir visitantes anónimos a /auth/login/?next=/auth/perfil/ (302).
+          - Renderizar plantilla 'authentication/profile.html' con 'user', badges de 'user.groups.all()' en modo solo lectura, 'profile_form' inicializado y 'password_form' vacío.
+        POST:
+          - Determinar acción mediante parámetro 'action' ('update_profile' o 'change_password').
+          - Si action == 'update_profile': procesar UserProfileForm, ejecutar UpdateUserProfileService bajo @transaction.atomic, registrar mensaje flash con messages.success y redirigir a authentication:profile. Garantizar que parámetros de rol/permiso sean ignorados.
+          - Si action == 'change_password': procesar UserPasswordChangeForm, ejecutar UpdateUserPasswordService bajo @transaction.atomic, invocar update_session_auth_hash(request, request.user), registrar mensaje flash de éxito y redirigir a authentication:profile.
+          - En caso de error de validación, renderizar HTTP 200 preservando errores accesibles con role="alert".
+
+    - path: /inventario/categorias/
+      name: inventario:lista_categorias
+      view: inventario.views.categorias_view
+      http_methods: [GET]
+      auth_required: true
+      permissions_required: [inventario.view_categoria]
+
+frontend:
+
+  design_system_reference: Stitch TeckStore Admin Dashboard (projects/13180317676610673396)
+  framework: Tailwind CSS v4 (@theme tokens)
+  templates:
+    - path: authentication/templates/authentication/login.html
+      structure:
+        - Extiende de layouts/auth.html.
+        - Card central 'bg-surface-container rounded-2xl shadow-2xl p-8 max-w-md w-full border border-outline-variant/30'.
+        - Header con logo TeckStore, badge 'Acceso Seguro • SSO v2.4' y título 'Iniciar Sesión'.
+        - Formulario POST con token {% csrf_token %} y campo oculto para 'next' si está presente.
+        - Alerta accesible de error con role="alert", aria-live="polite", text-rose-600 y fondo semántico para non_field_errors.
+        - Campo 'username' con label for="id_username", placeholder, icono de alternate_email y aria-invalid.
+        - Campo 'password' con label for="id_password", icono de lock, botón dinámico de mostrar/ocultar contraseña con SVG.
+        - Fila de opciones: Checkbox 'Recordar este dispositivo por 30 días' y enlace '¿Olvidaste tu contraseña?'.
+        - Botón CTA principal 'bg-primary-container text-on-primary-container hover:brightness-110 font-bold rounded-xl py-3.5 shadow-lg'.
+        - Footer con enlace accesible '¿No tienes una cuenta? Solicitar registro' apuntando a authentication:register.
+    - path: authentication/templates/authentication/user_list.html
+      structure:
+        - Extiende de base.html con active_nav='usuarios'.
+        - Header de sección con título "Gestión de Usuarios", descripción y total de cuentas.
+        - Tabla responsiva con bordes surface-container, avatar, nombre, correo, fecha de registro, badges de roles y botón "Gestionar Roles".
+    - path: authentication/templates/authentication/user_manage_access.html
+      structure:
+        - Extiende de base.html con active_nav='usuarios'.
+        - Card central con datos del usuario objetivo.
+        - Fieldset de Roles con checkboxes accesibles y descripciones de alcance.
+        - Fieldset de Permisos Directos Especiales (ej. inventario.add_categoria).
+        - Botones de acción: Guardar Cambios y Cancelar.
+    - path: authentication/templates/authentication/profile.html
+      structure:
+        - Extiende de base.html con active_nav='perfil'.
+        - Header de página con avatar ampliado con gradiente de iniciales, nombre de usuario y badge de verificación.
+        - Grid de dos tarjetas separadas ('bg-surface-container rounded-2xl border border-outline-variant/30 p-6 sm:p-8 shadow-md'):
+            1. Tarjeta "Información Personal y Roles Asignados":
+               - Bloque visual con badges de roles en solo lectura (usuario.groups.all) con texto en mayúsculas, bordes semánticos y chip descriptivo ("Tus accesos son gestionados por el Administrador").
+               - Formulario POST con action='update_profile'.
+               - Campo 'first_name' (Nombre Completo) con label for="id_first_name", icono, placeholder y validación accesible.
+               - Campo 'email' (Correo Electrónico) con label for="id_email", icono y error en caso de duplicidad.
+               - Botón CTA "Guardar Información" ('bg-primary-container text-on-primary-container font-semibold rounded-xl py-3 px-6 shadow-md hover:brightness-110 active:scale-95 transition-all').
+            2. Tarjeta "Seguridad y Cambio de Contraseña":
+               - Formulario POST con action='change_password'.
+               - Campo 'current_password' con label for="id_current_password", icono de seguridad y mensaje de error si no coincide.
+               - Campo 'new_password1' con requisitos de longitud y complejidad.
+               - Campo 'new_password2' con confirmación idéntica.
+               - Botón CTA "Actualizar Contraseña" ('bg-surface-container-highest text-primary font-semibold border border-outline-variant/40 rounded-xl py-3 px-6 hover:bg-surface-container-high active:scale-95 transition-all').
+        - Mensajes flash de confirmación de éxito ('messages.success') o errores accesibles con role="alert" y text-rose-600.
+
+

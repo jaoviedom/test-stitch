@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{% if categoria %}Editar Categoría: {{ categoria.nombre }}{% else %}Nueva Categoría{% endif %} · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <!-- Page Header Breadcrumbs & Action -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-outline-variant/30">
+    <div class="flex flex-col">
+      <div class="flex items-center gap-2 text-xs text-outline mb-1">
+        <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+        <span>/</span>
+        <a href="{% url 'inventario:lista_categorias' %}" class="hover:text-primary transition-colors">Categorías</a>
+        <span>/</span>
+        <span class="text-on-surface font-medium">{% if categoria %}Editar Categoría{% else %}Nueva Categoría{% endif %}</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-on-surface flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-primary text-[28px]">{% if categoria %}edit_note{% else %}add_circle{% endif %}</span>
+        {% if categoria %}Editar Categoría: {{ categoria.nombre }}{% else %}Registrar Nueva Categoría{% endif %}
+      </h1>
+      <p class="text-sm text-outline mt-0.5">
+        {% if categoria %}
+          Actualiza los datos, descripción y disponibilidad de la categoría. El slug se recalculará automáticamente si modificas el nombre.
+        {% else %}
+          Crea una categoría para clasificar y organizar los productos en el catálogo de la tienda.
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'inventario:lista_categorias' %}"
+         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container text-on-surface text-sm font-medium transition-all">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Volver al Listado
+      </a>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="rounded-2xl border border-outline-variant/30 bg-surface-container p-6 lg:p-8 shadow-sm">
+    <form method="post" action="{% if categoria %}{% url 'inventario:editar_categoria' categoria.pk %}{% else %}{% url 'inventario:crear_categoria' %}{% endif %}" class="space-y-6" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div role="alert" aria-live="polite" class="p-4 rounded-xl bg-error/15 border border-error/30 text-error text-sm font-medium flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-[20px]">error</span>
+        <span>{{ form.non_field_errors.0 }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Campo: Nombre -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="id_nombre" class="block text-sm font-semibold text-on-surface">
+            Nombre de la Categoría <span class="text-rose-500">*</span>
+          </label>
+          <span class="text-xs text-outline font-mono">Máx. 100 caracteres</span>
+        </div>
+        <div class="relative">
+          <input type="text"
+                 name="nombre"
+                 id="id_nombre"
+                 value="{{ form.nombre.value|default:'' }}"
+                 placeholder="Ej. Bebidas y Licores"
+                 maxlength="100"
+                 required
+                 autocomplete="off"
+                 {% if form.nombre.errors %}aria-invalid="true"{% endif %}
+                 class="w-full py-2.5 px-3.5 text-sm rounded-xl border {% if form.nombre.errors %}border-rose-500 focus:border-rose-600 focus:ring-rose-500/20 bg-rose-500/5{% else %}border-outline-variant/50 focus:border-emerald-600 focus:ring-emerald-600/20 bg-surface-container-low{% endif %} text-on-surface placeholder-outline focus:outline-none focus:ring-2 transition-all">
+        </div>
+        {% if form.nombre.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          {{ form.nombre.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Campo: Descripción -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="id_descripcion" class="block text-sm font-semibold text-on-surface">
+            Descripción (Opcional)
+          </label>
+          <span class="text-xs text-outline font-mono">Máx. 500 caracteres</span>
+        </div>
+        <textarea name="descripcion"
+                  id="id_descripcion"
+                  rows="3"
+                  placeholder="Detalles sobre los productos englobados en esta categoría..."
+                  maxlength="500"
+                  {% if form.descripcion.errors %}aria-invalid="true"{% endif %}
+                  class="w-full py-2.5 px-3.5 text-sm rounded-xl border {% if form.descripcion.errors %}border-rose-500 focus:border-rose-600 focus:ring-rose-500/20 bg-rose-500/5{% else %}border-outline-variant/50 focus:border-emerald-600 focus:ring-emerald-600/20 bg-surface-container-low{% endif %} text-on-surface placeholder-outline focus:outline-none focus:ring-2 transition-all">{{ form.descripcion.value|default:'' }}</textarea>
+        {% if form.descripcion.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          {{ form.descripcion.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Campo: Activo -->
+      <div class="pt-2">
+        <div class="p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low flex items-start gap-3.5 hover:border-outline-variant/50 transition-colors">
+          <div class="flex items-center h-5">
+            <input type="checkbox"
+                   name="activo"
+                   id="id_activo"
+                   {% if form.activo.value or form.activo.value is None and not categoria %}checked{% endif %}
+                   class="w-4 h-4 rounded border-outline-variant/60 text-emerald-600 focus:ring-emerald-500 bg-surface-container focus:ring-2 cursor-pointer transition-colors">
+          </div>
+          <div class="flex flex-col">
+            <label for="id_activo" class="text-sm font-semibold text-on-surface cursor-pointer">
+              Categoría Activa
+            </label>
+            <p class="text-xs text-outline mt-0.5">
+              Al estar activa, estará disponible inmediatamente para clasificar productos en el catálogo y POS.
+            </p>
+          </div>
+        </div>
+        {% if form.activo.errors %}
+        <p role="alert" aria-live="polite" class="text-rose-500 text-xs mt-1.5 font-medium">
+          {{ form.activo.errors.0 }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Actions Footer -->
+      <div class="pt-4 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-end gap-3">
+        <a href="{% url 'inventario:lista_categorias' %}"
+           class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container-high text-on-surface text-sm font-medium text-center transition-colors">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-all">
+          <span class="material-symbols-outlined text-[20px]">save</span>
+          {% if categoria %}Actualizar Cambios{% else %}Guardar Categoría{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

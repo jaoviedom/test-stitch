@@ -1,0 +1,22 @@
+<!-- Reusable Status Badge Component -->
+{% if badge_status == 'completada' or badge_status == 'success' %}
+  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-secondary bg-secondary/15 text-[11px] font-bold uppercase tracking-wider">
+    <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+    {{ badge_label|default:'Completada' }}
+  </span>
+{% elif badge_status == 'pendiente' or badge_status == 'warning' %}
+  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-tertiary bg-tertiary/15 text-[11px] font-bold uppercase tracking-wider">
+    <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+    {{ badge_label|default:'Pendiente' }}
+  </span>
+{% elif badge_status == 'cancelada' or badge_status == 'error' or badge_status == 'danger' %}
+  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-error bg-error/15 text-[11px] font-bold uppercase tracking-wider">
+    <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+    {{ badge_label|default:'Cancelada' }}
+  </span>
+{% else %}
+  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-on-surface-variant bg-surface-container-high text-[11px] font-bold uppercase tracking-wider">
+    <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+    {{ badge_label|default:'Inactivo' }}
+  </span>
+{% endif %}

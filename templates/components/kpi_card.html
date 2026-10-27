@@ -1,0 +1,37 @@
+<!-- Reusable KPI Card Component -->
+<div class="p-5 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md flex flex-col justify-between gap-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-outline-variant/60">
+  <div class="flex items-center justify-between">
+    <span class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">{{ kpi_title }}</span>
+    <div class="w-9 h-9 rounded-xl flex items-center justify-center 
+      {% if kpi_color == 'secondary' %}bg-secondary/15 text-secondary
+      {% elif kpi_color == 'tertiary' %}bg-tertiary/15 text-tertiary
+      {% elif kpi_color == 'error' %}bg-error/15 text-error
+      {% else %}bg-primary-container/20 text-primary{% endif %}">
+      <span class="material-symbols-outlined text-[20px]">{{ kpi_icon|default:'analytics' }}</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="font-bold text-2xl lg:text-3xl text-on-surface tracking-tight font-sans">
+      {{ kpi_value }}
+      {% if kpi_unit %}<span class="text-xs font-normal text-on-surface-variant ml-1">{{ kpi_unit }}</span>{% endif %}
+    </div>
+
+    {% if kpi_trend_val %}
+    <div class="mt-2.5 flex items-center gap-2">
+      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+        {% if kpi_trend_type == 'danger' or kpi_trend_type == 'error' %}text-error bg-error/15
+        {% elif kpi_trend_type == 'warning' %}text-tertiary bg-tertiary/15
+        {% else %}text-secondary bg-secondary/15{% endif %}">
+        {% if kpi_trend_icon %}
+        <span class="material-symbols-outlined text-[13px]">{{ kpi_trend_icon }}</span>
+        {% endif %}
+        {{ kpi_trend_val }}
+      </span>
+      {% if kpi_trend_label %}
+      <span class="text-xs text-outline">{{ kpi_trend_label }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>

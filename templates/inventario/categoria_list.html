@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo de Categorías · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Header de Sección -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-outline-variant/30">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-outline mb-1">
+        <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+        <span>/</span>
+        <span class="text-on-surface font-medium">Categorías</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-on-surface flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-primary text-[28px]">category</span>
+        Catálogo de Categorías
+      </h1>
+      <p class="text-sm text-outline mt-0.5">
+        Organiza la estructura de departamentos y familias de productos de la tienda.
+      </p>
+    </div>
+
+    {% if perms.inventario.add_categoria %}
+    <div class="flex items-center gap-3">
+      <a href="{% url 'inventario:crear_categoria' %}"
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-all">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+        Nueva Categoría
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="mb-4 rounded-2xl border border-outline-variant/30 bg-surface-container p-4 shadow-sm">
+    <form method="get" action="{% url 'inventario:lista_categorias' %}" role="search" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <label for="search-input" class="sr-only">Buscar categorías</label>
+      <div class="relative flex-1">
+        <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+        <input type="text"
+               name="q"
+               id="search-input"
+               value="{{ q }}"
+               placeholder="Buscar categoría por nombre o descripción..."
+               class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low text-on-surface placeholder-outline text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="submit"
+                aria-label="Buscar"
+                title="Buscar"
+                class="inline-flex items-center justify-center p-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface transition-colors">
+          <span class="material-symbols-outlined text-[20px]">search</span>
+        </button>
+        {% if q %}
+        <a href="{% url 'inventario:lista_categorias' %}"
+           class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-sm font-medium transition-colors">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+          Limpiar búsqueda
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de Categorías -->
+  <div class="rounded-2xl border border-outline-variant/30 bg-surface-container overflow-hidden shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-outline-variant/20 bg-surface-container-high/60 text-xs font-semibold text-outline uppercase tracking-wider">
+            <th class="py-3.5 px-6">Nombre</th>
+            <th class="py-3.5 px-6">Descripción</th>
+            <th class="py-3.5 px-6 text-center">Total Productos</th>
+            <th class="py-3.5 px-6 text-center">Estado</th>
+            <th class="py-3.5 px-6 text-right">Fecha Creación</th>
+            {% if perms.inventario.change_categoria %}
+            <th class="py-3.5 px-6 text-center">Acciones</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/10 text-sm">
+          {% for cat in categorias %}
+          <tr class="hover:bg-surface-container-high/40 transition-colors">
+            <td class="py-4 px-6 font-semibold text-on-surface flex items-center gap-2.5">
+              <span class="w-2 h-2 rounded-full {% if cat.activo %}bg-emerald-500{% else %}bg-slate-400{% endif %}"></span>
+              {{ cat.nombre }}
+            </td>
+            <td class="py-4 px-6 text-outline max-w-xs truncate">
+              {{ cat.descripcion|default:"—" }}
+            </td>
+            <td class="py-4 px-6 text-center font-mono text-xs text-on-surface font-semibold tabular-nums">
+              {{ cat.total_productos|default:0 }}
+            </td>
+            <td class="py-4 px-6 text-center">
+              {% if cat.activo %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                Activa
+              </span>
+              {% else %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                Inactiva
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-4 px-6 text-right font-mono text-xs text-outline tabular-nums">
+              {{ cat.creado_en|date:"d/m/Y H:i" }}
+            </td>
+            {% if perms.inventario.change_categoria %}
+            <td class="py-4 px-6 text-center">
+              <a href="{% url 'inventario:editar_categoria' cat.pk %}"
+                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container-high text-xs font-semibold text-primary transition-colors shadow-2xs">
+                <span class="material-symbols-outlined text-[16px]">edit</span>
+                Editar
+              </a>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{% if perms.inventario.change_categoria %}6{% else %}5{% endif %}" class="py-12 px-6 text-center">
+              <div class="flex flex-col items-center justify-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-outline">
+                  <span class="material-symbols-outlined text-[28px]">folder_off</span>
+                </div>
+                <div class="flex flex-col">
+                  {% if q %}
+                    <span class="font-semibold text-on-surface">No se encontraron categorías que coincidan con su búsqueda</span>
+                    <span class="text-xs text-outline mt-0.5">Intente con otros términos o limpie el filtro actual.</span>
+                    <div class="mt-3">
+                      <a href="{% url 'inventario:lista_categorias' %}"
+                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-primary hover:bg-surface-container-highest transition-all">
+                        <span class="material-symbols-outlined text-[16px]">refresh</span>
+                        Limpiar búsqueda
+                      </a>
+                    </div>
+                  {% else %}
+                    <span class="font-semibold text-on-surface">No hay categorías registradas</span>
+                    <span class="text-xs text-outline mt-0.5">Comienza creando tu primera categoría para organizar el inventario.</span>
+                    {% if perms.inventario.add_categoria %}
+                    <a href="{% url 'inventario:crear_categoria' %}"
+                       class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-semibold shadow hover:opacity-90 transition-all">
+                      <span class="material-symbols-outlined text-[18px]">add</span>
+                      Crear Primera Categoría
+                    </a>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación Accesible -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-outline-variant/20 bg-surface-container-high/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-xs text-outline">
+        Mostrando <span class="font-semibold text-on-surface tabular-nums">{{ page_obj.start_index }}</span> a <span class="font-semibold text-on-surface tabular-nums">{{ page_obj.end_index }}</span> de <span class="font-semibold text-on-surface tabular-nums">{{ total_categorias }}</span> categorías
+      </div>
+      <nav class="inline-flex items-center gap-1.5" aria-label="Navegación de páginas de categorías">
+        {% if page_obj.has_previous %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}page={{ page_obj.previous_page_number }}"
+           aria-label="Página anterior"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-medium transition-colors">
+          <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          Anterior
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-outline-variant/20 bg-surface-container-low/50 text-outline/50 text-xs font-medium cursor-not-allowed">
+          <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          Anterior
+        </span>
+        {% endif %}
+
+        <span class="px-3 py-1.5 text-xs font-mono font-medium text-outline tabular-nums">
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}page={{ page_obj.next_page_number }}"
+           aria-label="Página siguiente"
+           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-medium transition-colors">
+          Siguiente
+          <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        </a>
+        {% else %}
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-outline-variant/20 bg-surface-container-low/50 text-outline/50 text-xs font-medium cursor-not-allowed">
+          Siguiente
+          <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        </span>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

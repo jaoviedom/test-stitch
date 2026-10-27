@@ -1,0 +1,76 @@
+<!-- Floating Responsive Sidebar Component (TeckStore Admin Dashboard) -->
+<aside class="fixed top-4 left-4 z-50 h-[calc(100vh-2rem)] w-64 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-[0_4px_25px_-2px_rgba(0,0,0,0.45)] flex flex-col justify-between transition-transform duration-300 ease-in-out -translate-x-[calc(100%+2rem)] lg:translate-x-0" id="sidebar-drawer">
+  <div class="flex flex-col p-4 overflow-y-auto">
+    <!-- Brand Header -->
+    <div class="flex items-center justify-between pb-5 border-b border-outline-variant/20 px-2">
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-container to-secondary-container flex items-center justify-center text-on-primary-container shadow-md group-hover:scale-105 transition-transform">
+          <span class="material-symbols-outlined text-[22px]">storefront</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-headline-sm text-on-surface font-bold tracking-tight">TeckStore</span>
+          <span class="text-[11px] font-medium text-outline uppercase tracking-wider">Admin Panel</span>
+        </div>
+      </a>
+      <button aria-label="Cerrar menú lateral" class="lg:hidden flex items-center justify-center p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" id="close-sidebar-btn">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+
+    <!-- Group: Operaciones -->
+    <div class="mt-5 mb-2 px-2.5">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-outline">Operaciones</span>
+    </div>
+    <nav class="flex flex-col gap-1">
+      <a href="{% url 'inventario:lista_categorias' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'categorias' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px] {% if active_nav == 'categorias' %}text-on-primary-container{% else %}text-outline group-hover:text-primary{% endif %}">category</span>
+        <span>Categorías</span>
+      </a>
+
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'productos' or not active_nav or active_nav == 'dashboard' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px] {% if active_nav == 'productos' or not active_nav or active_nav == 'dashboard' %}text-on-primary-container{% else %}text-outline group-hover:text-primary{% endif %}">inventory_2</span>
+        <span>Productos & Stock</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'ventas' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+        <span>Ventas</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'informes' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">bar_chart</span>
+        <span>Informes</span>
+      </a>
+    </nav>
+
+    <!-- Group: Administración -->
+    <div class="mt-6 mb-2 px-2.5 pt-4 border-t border-outline-variant/20">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-outline">Administración</span>
+    </div>
+    <nav class="flex flex-col gap-1">
+      <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'roles' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+        <span>Roles y Permisos</span>
+      </a>
+
+      <a href="{% url 'authentication:user_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 {% if active_nav == 'usuarios' %}bg-primary-container text-on-primary-container font-semibold shadow-sm{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface{% endif %}">
+        <span class="material-symbols-outlined text-[20px]">group</span>
+        <span>Usuarios</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Bottom Quick Status Card -->
+  <div class="p-4 border-t border-outline-variant/20">
+    <div class="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></span>
+        <div class="flex flex-col">
+          <span class="text-[11px] font-semibold text-on-surface">Servidor Activo</span>
+          <span class="text-[10px] text-outline">v2.4.0 (Prod)</span>
+        </div>
+      </div>
+      <span class="material-symbols-outlined text-secondary text-[18px]">verified</span>
+    </div>
+  </div>
+</aside>

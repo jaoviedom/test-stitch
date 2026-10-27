@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Principal · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col w-full gap-6">
+
+  <!-- Top Utility & Greeting Bar -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+        <span class="text-[11px] uppercase tracking-wider font-bold text-outline">Terminal de Control • TeckStore</span>
+      </div>
+      <h1 class="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
+        Hola, {% if user.first_name %}{{ user.first_name }}{% elif user.is_authenticated %}{{ user.username }}{% else %}Invitado{% endif %}
+      </h1>
+      <p class="text-sm text-on-surface-variant">
+        Resumen operativo de inventario y flujo de facturación en tiempo real.
+      </p>
+    </div>
+
+    <!-- Actions & Filter Group -->
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center rounded-xl bg-surface-container-high p-1 shadow-sm border border-outline-variant/30">
+        <button 
+          id="range-30d" 
+          onclick="switchRange('30d')"
+          class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-primary-container text-on-primary-container shadow-xs"
+        >
+          Últimos 30 días
+        </button>
+        <button 
+          id="range-qtr" 
+          onclick="switchRange('qtr')"
+          class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-on-surface-variant hover:text-on-surface"
+        >
+          Este trimestre
+        </button>
+      </div>
+
+      <button class="flex items-center gap-2 h-10 px-4 rounded-xl bg-surface-container-high text-on-surface text-sm font-medium hover:bg-surface-container-highest transition-colors shadow-xs border border-outline-variant/30">
+        <span class="material-symbols-outlined text-[18px] text-primary">cloud_download</span>
+        <span class="hidden sm:inline">Exportar</span>
+      </button>
+
+      {% if perms.inventario.add_producto %}
+      <a href="{% url 'inventario:crear_producto' %}" class="flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-all">
+        <span class="material-symbols-outlined text-[20px]">add</span>
+        <span>Nuevo Producto</span>
+      </a>
+      {% endif %}
+
+      <button id="btn-new-order" class="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary-container text-on-primary-container text-sm font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md">
+        <span class="material-symbols-outlined text-[20px]">add_circle</span>
+        <span>Nuevo Pedido / Venta</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Reusable KPI Cards Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <!-- KPI 1: Ventas Totales -->
+    {% include "components/kpi_card.html" with kpi_title="Ventas Totales" kpi_value="$48,290.00" kpi_unit="USD" kpi_icon="payments" kpi_trend_val="+14.2%" kpi_trend_icon="trending_up" kpi_trend_type="success" kpi_trend_label="vs. mes anterior" kpi_color="primary" %}
+
+    <!-- KPI 2: Pedidos Completados -->
+    {% include "components/kpi_card.html" with kpi_title="Pedidos Completados" kpi_value="1,284" kpi_unit="órdenes" kpi_icon="check_circle" kpi_trend_val="+8.1%" kpi_trend_icon="arrow_upward" kpi_trend_type="success" kpi_trend_label="tasa conv. 94.6%" kpi_color="secondary" %}
+
+    <!-- KPI 3: Stock en Alerta -->
+    {% include "components/kpi_card.html" with kpi_title="Stock en Alerta" kpi_value="14" kpi_unit="SKUs bajos" kpi_icon="warning" kpi_trend_val="Atención" kpi_trend_icon="schedule" kpi_trend_type="warning" kpi_trend_label="reponer en < 5 días" kpi_color="tertiary" %}
+
+    <!-- KPI 4: Productos Agotados -->
+    {% include "components/kpi_card.html" with kpi_title="Agotados / Pérdidas" kpi_value="3" kpi_unit="ítems críticos" kpi_icon="do_not_disturb_on" kpi_trend_val="Crítico" kpi_trend_icon="priority_high" kpi_trend_type="danger" kpi_trend_label="demanda no suplida" kpi_color="error" %}
+  </div>
+
+  <!-- Bento Charts & Insights Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Chart: Sales & Revenue Trend (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col p-6 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md gap-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-on-surface">Tendencia Operativa</h2>
+          <p class="text-xs text-on-surface-variant">Registro semanal de rendimiento comercial</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 text-xs text-primary font-semibold">
+            <span class="w-2.5 h-2.5 rounded-full bg-primary-container"></span> Ingresos ($)
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-xs text-secondary font-semibold ml-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span> Unidades
+          </span>
+        </div>
+      </div>
+
+      <!-- High Precision SVG Trend Chart -->
+      <div class="w-full h-56 relative flex items-end pt-4 pb-2">
+        <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 540 180">
+          <defs>
+            <linearGradient id="gradRevenue" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#4d8eff" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#4d8eff" stop-opacity="0.0"/>
+            </linearGradient>
+            <linearGradient id="gradUnits" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#4edea3" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#4edea3" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Horizontal Grid Lines -->
+          <line stroke="#424754" stroke-dasharray="3 3" stroke-opacity="0.3" x1="0" y1="20" x2="540" y2="20" />
+          <line stroke="#424754" stroke-dasharray="3 3" stroke-opacity="0.3" x1="0" y1="70" x2="540" y2="70" />
+          <line stroke="#424754" stroke-dasharray="3 3" stroke-opacity="0.3" x1="0" y1="120" x2="540" y2="120" />
+          <line stroke="#424754" stroke-opacity="0.4" x1="0" y1="170" x2="540" y2="170" />
+
+          <!-- Area Fills -->
+          <polygon fill="url(#gradRevenue)" points="20,135 95,95 170,120 245,60 320,80 395,35 470,55 520,25 520,170 20,170" />
+          <polygon fill="url(#gradUnits)" points="20,150 95,130 170,140 245,95 320,110 395,75 470,85 520,65 520,170 20,170" />
+
+          <!-- Revenue Path -->
+          <polyline fill="none" stroke="#4d8eff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+            points="20,135 95,95 170,120 245,60 320,80 395,35 470,55 520,25" />
+
+          <!-- Units Path -->
+          <polyline fill="none" stroke="#4edea3" stroke-width="2.5" stroke-dasharray="4 2" stroke-linecap="round" stroke-linejoin="round"
+            points="20,150 95,130 170,140 245,95 320,110 395,75 470,85 520,65" />
+
+          <!-- Interactive Node Highlights -->
+          <circle cx="245" cy="60" r="4.5" fill="#4d8eff" stroke="#171f33" stroke-width="2" />
+          <circle cx="395" cy="35" r="5" fill="#adc6ff" stroke="#002e6a" stroke-width="2.5" />
+          <circle cx="520" cy="25" r="4.5" fill="#4d8eff" stroke="#171f33" stroke-width="2" />
+        </svg>
+      </div>
+
+      <!-- Chart Timestamps -->
+      <div class="flex justify-between items-center px-2 text-[11px] text-outline font-medium">
+        <span>Sem 01</span>
+        <span>Sem 02</span>
+        <span>Sem 03</span>
+        <span>Sem 04</span>
+        <span>Sem 05</span>
+        <span>Sem 06</span>
+        <span>Sem 07</span>
+        <span class="text-primary font-bold">Sem 08 (Hoy)</span>
+      </div>
+    </div>
+
+    <!-- Category Sales Breakdown (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col p-6 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-on-surface">Ventas por Categoría</h2>
+          <p class="text-xs text-on-surface-variant">Volumen y peso relativo en inventario</p>
+        </div>
+        <span class="material-symbols-outlined text-outline text-[20px]">donut_large</span>
+      </div>
+
+      <div class="flex flex-col gap-3.5 mt-1">
+        <!-- Hardware -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-on-surface font-semibold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-primary-container"></span>
+              Hardware y Servidores
+            </span>
+            <span class="text-primary font-bold">$21,730 (45%)</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div class="h-full bg-primary-container rounded-full" style="width: 45%;"></div>
+          </div>
+        </div>
+
+        <!-- Periféricos -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-on-surface font-semibold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-secondary"></span>
+              Periféricos & Monitores
+            </span>
+            <span class="text-secondary font-bold">$13,520 (28%)</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div class="h-full bg-secondary rounded-full" style="width: 28%;"></div>
+          </div>
+        </div>
+
+        <!-- Componentes -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-on-surface font-semibold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-tertiary"></span>
+              Componentes & GPU
+            </span>
+            <span class="text-tertiary font-bold">$8,690 (18%)</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div class="h-full bg-tertiary rounded-full" style="width: 18%;"></div>
+          </div>
+        </div>
+
+        <!-- Audio & Gaming -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-on-surface font-semibold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-outline"></span>
+              Audio & Gaming Pro
+            </span>
+            <span class="text-on-surface-variant font-bold">$4,350 (9%)</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div class="h-full bg-outline-variant rounded-full" style="width: 9%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Category Insight Summary Box -->
+      <div class="mt-auto p-3.5 rounded-xl bg-surface-container-high border border-outline-variant/30 flex items-center gap-3">
+        <span class="material-symbols-outlined text-secondary text-[22px]">insights</span>
+        <div class="text-xs text-on-surface-variant leading-tight">
+          <strong class="text-on-surface font-semibold">Tendencia destacada:</strong> Los procesadores para workstation crecieron un <span class="text-secondary font-bold">+22%</span> semanal.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Data Grid & Critical Stock Alerts (8 / 4 Grid) -->
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <!-- Recent Transactions Table (8 cols) -->
+    <div class="xl:col-span-8 flex flex-col rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md overflow-hidden">
+      <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-container border-b border-outline-variant/20">
+        <div>
+          <h2 class="text-base font-semibold text-on-surface">Últimas Ventas y Transacciones</h2>
+          <p class="text-xs text-on-surface-variant">Registro de órdenes procesadas en pasarela</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
+            Ver todas (1,284)
+          </button>
+        </div>
+      </div>
+
+      <!-- Responsive Table Container -->
+      <div class="w-full overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container-high text-outline text-[11px] uppercase tracking-wider border-b border-outline-variant/20">
+              <th class="py-3 px-4 font-semibold">ID Orden</th>
+              <th class="py-3 px-4 font-semibold">Cliente</th>
+              <th class="py-3 px-4 font-semibold hidden md:table-cell">Productos</th>
+              <th class="py-3 px-4 font-semibold hidden sm:table-cell">Fecha</th>
+              <th class="py-3 px-4 font-semibold">Monto</th>
+              <th class="py-3 px-4 font-semibold">Estado</th>
+              <th class="py-3 px-4 text-right font-semibold">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/10 text-xs">
+            <!-- Row 1 -->
+            <tr class="hover:bg-primary-container/5 transition-colors">
+              <td class="py-3.5 px-4 font-bold text-primary">#TK-8492</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-primary-container/20 flex items-center justify-center font-bold text-xs text-primary">
+                    DL
+                  </div>
+                  <div>
+                    <div class="font-semibold text-on-surface">Daniel López</div>
+                    <div class="text-[11px] text-outline">daniel.lop@techcorp.io</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-on-surface-variant hidden md:table-cell truncate max-w-xs">
+                RTX 4080 Super + Fuente 850W
+              </td>
+              <td class="py-3.5 px-4 text-outline hidden sm:table-cell">Hoy, 14:32</td>
+              <td class="py-3.5 px-4 font-semibold text-on-surface">$1,429.50</td>
+              <td class="py-3.5 px-4">
+                {% include "components/status_badge.html" with badge_status="completada" badge_label="Completada" %}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Detalles">
+                  <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+              </td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr class="hover:bg-primary-container/5 transition-colors">
+              <td class="py-3.5 px-4 font-bold text-primary">#TK-8491</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-xs text-secondary">
+                    CR
+                  </div>
+                  <div>
+                    <div class="font-semibold text-on-surface">Claudia Rivas</div>
+                    <div class="text-[11px] text-outline">c.rivas@designlab.es</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-on-surface-variant hidden md:table-cell truncate max-w-xs">
+                Monitor UltraWide 34" 144Hz
+              </td>
+              <td class="py-3.5 px-4 text-outline hidden sm:table-cell">Hoy, 12:15</td>
+              <td class="py-3.5 px-4 font-semibold text-on-surface">$689.00</td>
+              <td class="py-3.5 px-4">
+                {% include "components/status_badge.html" with badge_status="pendiente" badge_label="Pendiente" %}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Detalles">
+                  <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+              </td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr class="hover:bg-primary-container/5 transition-colors">
+              <td class="py-3.5 px-4 font-bold text-primary">#TK-8490</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-tertiary/20 flex items-center justify-center font-bold text-xs text-tertiary">
+                    MA
+                  </div>
+                  <div>
+                    <div class="font-semibold text-on-surface">Marcos Alarcón</div>
+                    <div class="text-[11px] text-outline">alarcon@globalcloud.net</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-on-surface-variant hidden md:table-cell truncate max-w-xs">
+                Teclado Mecánico Custom RGB
+              </td>
+              <td class="py-3.5 px-4 text-outline hidden sm:table-cell">Hoy, 10:48</td>
+              <td class="py-3.5 px-4 font-semibold text-on-surface">$185.00</td>
+              <td class="py-3.5 px-4">
+                {% include "components/status_badge.html" with badge_status="completada" badge_label="Completada" %}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Detalles">
+                  <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+              </td>
+            </tr>
+
+            <!-- Row 4 -->
+            <tr class="hover:bg-primary-container/5 transition-colors">
+              <td class="py-3.5 px-4 font-bold text-primary">#TK-8489</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-error/20 flex items-center justify-center font-bold text-xs text-error">
+                    EG
+                  </div>
+                  <div>
+                    <div class="font-semibold text-on-surface">Esteban Gómez</div>
+                    <div class="text-[11px] text-outline">e.gomez@vortex.dev</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-on-surface-variant hidden md:table-cell truncate max-w-xs">
+                Kit 64GB DDR5 6000MHz
+              </td>
+              <td class="py-3.5 px-4 text-outline hidden sm:table-cell">Ayer, 18:20</td>
+              <td class="py-3.5 px-4 font-semibold text-on-surface">$310.00</td>
+              <td class="py-3.5 px-4">
+                {% include "components/status_badge.html" with badge_status="cancelada" badge_label="Cancelada" %}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <button class="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Detalles">
+                  <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Critical Inventory Alerts Panel (4 cols) -->
+    <div class="xl:col-span-4 flex flex-col p-5 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md gap-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary text-[22px]">inventory</span>
+          <h2 class="text-base font-semibold text-on-surface">Alertas Críticas</h2>
+        </div>
+        <span class="px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary text-xs font-bold">
+          3 Acción Req.
+        </span>
+      </div>
+      <p class="text-xs text-on-surface-variant -mt-2">
+        Productos bajo umbral de seguridad operacional.
+      </p>
+
+      <div class="flex flex-col gap-3">
+        <!-- Critical Item 1 -->
+        <div class="p-3.5 rounded-xl bg-surface-container-high border border-outline-variant/20 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-on-surface">GPU GeForce RTX 4070 Ti</span>
+            <span class="text-[11px] text-error font-bold uppercase tracking-wide">0 en stock</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-outline">
+            <span>SKU: HW-GPU-4070</span>
+            <span class="text-tertiary font-medium">Demanda alta</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <button class="flex-1 py-1.5 px-2 rounded-lg bg-primary-container text-on-primary-container text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center gap-1.5" onclick="reorderAlert('GeForce RTX 4070 Ti', this)">
+              <span class="material-symbols-outlined text-[14px]">local_shipping</span> Reordenar
+            </button>
+            <button class="py-1.5 px-2.5 rounded-lg bg-surface-container-highest text-on-surface text-xs hover:bg-surface-variant transition-colors">
+              Historial
+            </button>
+          </div>
+        </div>
+
+        <!-- Critical Item 2 -->
+        <div class="p-3.5 rounded-xl bg-surface-container-high border border-outline-variant/20 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-on-surface">Memoria RAM DDR5 32GB (2x16)</span>
+            <span class="text-[11px] text-tertiary font-bold uppercase tracking-wide">3 disponibles</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-outline">
+            <span>SKU: MEM-DDR5-32</span>
+            <span>Mínimo: 10 unid.</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <button class="flex-1 py-1.5 px-2 rounded-lg bg-primary-container text-on-primary-container text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center gap-1.5" onclick="reorderAlert('RAM DDR5 32GB', this)">
+              <span class="material-symbols-outlined text-[14px]">add_shopping_cart</span> Reponer Stock
+            </button>
+            <button class="py-1.5 px-2.5 rounded-lg bg-surface-container-highest text-on-surface text-xs hover:bg-surface-variant transition-colors">
+              Historial
+            </button>
+          </div>
+        </div>
+
+        <!-- Critical Item 3 -->
+        <div class="p-3.5 rounded-xl bg-surface-container-high border border-outline-variant/20 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-on-surface">Teclado Mecánico Pro TKL</span>
+            <span class="text-[11px] text-tertiary font-bold uppercase tracking-wide">2 disponibles</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-outline">
+            <span>SKU: PER-KB-PRO</span>
+            <span>Mínimo: 8 unid.</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <button class="flex-1 py-1.5 px-2 rounded-lg bg-primary-container text-on-primary-container text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center gap-1.5" onclick="reorderAlert('Teclado Mecánico Pro TKL', this)">
+              <span class="material-symbols-outlined text-[14px]">add_shopping_cart</span> Reponer Stock
+            </button>
+            <button class="py-1.5 px-2.5 rounded-lg bg-surface-container-highest text-on-surface text-xs hover:bg-surface-variant transition-colors">
+              Historial
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function switchRange(type) {
+    const btn30 = document.getElementById('range-30d');
+    const btnQtr = document.getElementById('range-qtr');
+    if (!btn30 || !btnQtr) return;
+
+    if (type === '30d') {
+      btn30.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-primary-container text-on-primary-container shadow-xs";
+      btnQtr.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-on-surface-variant hover:text-on-surface";
+    } else {
+      btnQtr.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-primary-container text-on-primary-container shadow-xs";
+      btn30.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-on-surface-variant hover:text-on-surface";
+    }
+  }
+
+  function reorderAlert(productName, btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">refresh</span> Solicitando...`;
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.innerHTML = `<span class="material-symbols-outlined text-[14px] text-secondary">check</span> Orden generada`;
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 2500);
+    }, 700);
+  }
+
+  // Hook new order button for immediate user tactile response
+  document.getElementById('btn-new-order')?.addEventListener('click', function() {
+    this.classList.add('scale-95');
+    setTimeout(() => this.classList.remove('scale-95'), 150);
+  });
+</script>
+{% endblock %}

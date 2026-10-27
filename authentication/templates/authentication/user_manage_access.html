@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar Roles y Permisos · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col w-full max-w-4xl mx-auto gap-6">
+
+  <!-- Header & Back Navigation -->
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-2">
+        <a href="{% url 'authentication:user_list' %}" class="inline-flex items-center gap-1 text-xs text-primary hover:underline font-semibold">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span>Volver al listado de usuarios</span>
+        </a>
+      </div>
+      <h1 class="text-2xl font-bold text-on-surface tracking-tight">
+        Gestionar Roles y Permisos
+      </h1>
+      <p class="text-xs text-on-surface-variant">
+        Define los niveles de acceso operativo y permisos específicos para esta cuenta.
+      </p>
+    </div>
+  </div>
+
+  <!-- User Card Summary -->
+  <div class="p-5 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md flex items-center justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-3.5">
+      <div class="w-12 h-12 rounded-2xl bg-primary-container/20 border border-primary/30 flex items-center justify-center font-bold text-base text-primary shadow-xs">
+        {{ target_user.username|slice:":2"|upper }}
+      </div>
+      <div>
+        <div class="font-bold text-base text-on-surface">
+          {% if target_user.first_name %}{{ target_user.first_name }}{% else %}{{ target_user.username }}{% endif %}
+        </div>
+        <div class="text-xs text-outline">@{{ target_user.username }} • {{ target_user.email }}</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+      <span class="material-symbols-outlined text-secondary text-[18px]">verified</span>
+      <span>Cuenta activa</span>
+    </div>
+  </div>
+
+  <!-- Formulario de Accesos -->
+  <form method="POST" action="{% url 'authentication:user_manage_access' target_user.id %}" class="flex flex-col gap-6">
+    {% csrf_token %}
+
+    <!-- Fieldset 1: Roles Oficiales del Sistema -->
+    <fieldset class="p-6 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md flex flex-col gap-4">
+      <legend class="px-2 font-bold text-sm text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[20px]">badge</span>
+        <span>Roles Oficiales del Sistema (Grupos)</span>
+      </legend>
+      <p class="text-xs text-on-surface-variant -mt-2">
+        Selecciona uno o más roles simultáneos. Los permisos asociados a cada rol se combinan automáticamente.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-1">
+        {% for group in form.fields.roles.queryset %}
+        <label class="relative p-4 rounded-xl bg-surface-container-high border border-outline-variant/20 hover:border-primary/50 transition-all cursor-pointer flex flex-col gap-2 group">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sm text-on-surface capitalize">{{ group.name }}</span>
+            <input 
+              type="checkbox" 
+              name="roles" 
+              value="{{ group.id }}"
+              {% if group in form.roles.value or group.id in form.roles.value %}checked{% endif %}
+              class="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/50 bg-surface-container-lowest"
+            >
+          </div>
+          <span class="text-[11px] text-outline leading-snug">
+            {% if group.name == 'administrador' %}
+              Acceso total al sistema, auditoría, roles y configuración.
+            {% elif group.name == 'vendedor' %}
+              Operación comercial, cobros en POS y consulta de catálogo.
+            {% else %}
+              Rol base con acceso restringido al panel inicial y perfil propio.
+            {% endif %}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <!-- Fieldset 2: Permisos Granulares Directos -->
+    <fieldset class="p-6 rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md flex flex-col gap-4">
+      <legend class="px-2 font-bold text-sm text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary text-[20px]">key</span>
+        <span>Permisos Granulares Directos (Opcional)</span>
+      </legend>
+      <p class="text-xs text-on-surface-variant -mt-2">
+        Habilita permisos específicos independientes de los grupos asignados a este usuario.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+        {% for perm in form.fields.permissions.queryset %}
+        <label class="p-3 rounded-xl bg-surface-container-high border border-outline-variant/20 hover:border-secondary/50 transition-all cursor-pointer flex items-center justify-between gap-3">
+          <div class="flex flex-col">
+            <span class="text-xs font-semibold text-on-surface">{{ perm.name }}</span>
+            <span class="text-[10px] text-outline font-mono">{{ perm.content_type.app_label }}.{{ perm.codename }}</span>
+          </div>
+          <input 
+            type="checkbox" 
+            name="permissions" 
+            value="{{ perm.id }}"
+            {% if perm in form.permissions.value or perm.id in form.permissions.value %}checked{% endif %}
+            class="w-4 h-4 rounded text-secondary focus:ring-secondary border-outline-variant/50 bg-surface-container-lowest"
+          >
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <!-- Botones de Acción -->
+    <div class="flex items-center justify-end gap-3 pt-2">
+      <a href="{% url 'authentication:user_list' %}" class="px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface text-xs font-semibold transition-colors border border-outline-variant/30">
+        Cancelar
+      </a>
+      <button type="submit" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-container text-on-primary-container text-xs font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer">
+        <span class="material-symbols-outlined text-[18px]">save</span>
+        <span>Guardar Cambios</span>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

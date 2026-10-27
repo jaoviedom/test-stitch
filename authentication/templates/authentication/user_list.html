@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios · TeckStore Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col w-full gap-6">
+
+  <!-- Header de la sección -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+        <span class="text-[11px] uppercase tracking-wider font-bold text-outline">Seguridad & Control de Acceso</span>
+      </div>
+      <h1 class="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
+        Gestión de Usuarios
+      </h1>
+      <p class="text-sm text-on-surface-variant">
+        Asigna o revoca roles del sistema y permisos directos para el personal de TeckStore.
+      </p>
+    </div>
+
+    <!-- Acciones superiores -->
+    <div class="flex items-center gap-3">
+      <span class="px-3 py-1.5 rounded-xl bg-surface-container-high border border-outline-variant/30 text-xs text-on-surface font-medium">
+        Total: <strong class="text-primary font-bold">{{ users|length }}</strong> cuentas
+      </span>
+      <a href="{% url 'authentication:register' %}" class="flex items-center gap-2 h-10 px-4 rounded-xl bg-primary-container text-on-primary-container text-sm font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md">
+        <span class="material-symbols-outlined text-[20px]">person_add</span>
+        <span>Nuevo Usuario</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Tabla de Usuarios -->
+  <div class="w-full flex flex-col rounded-2xl bg-surface-container border border-outline-variant/30 shadow-md overflow-hidden">
+    
+    <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 bg-surface-container">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-[22px]">group</span>
+        <h2 class="text-base font-semibold text-on-surface">Cuentas Registradas</h2>
+      </div>
+    </div>
+
+    <!-- Responsive Table -->
+    <div class="w-full overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-high text-outline text-[11px] uppercase tracking-wider border-b border-outline-variant/20">
+            <th class="py-3.5 px-5 font-semibold">Usuario</th>
+            <th class="py-3.5 px-5 font-semibold">Correo Electrónico</th>
+            <th class="py-3.5 px-5 font-semibold">Roles Asignados</th>
+            <th class="py-3.5 px-5 font-semibold hidden md:table-cell">Permisos Directos</th>
+            <th class="py-3.5 px-5 text-right font-semibold">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/10 text-xs">
+          {% for u in users %}
+          <tr class="hover:bg-primary-container/5 transition-colors">
+            <!-- Usuario info -->
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center font-bold text-xs text-primary shadow-xs">
+                  {{ u.username|slice:":2"|upper }}
+                </div>
+                <div>
+                  <div class="font-semibold text-on-surface text-sm">
+                    {% if u.first_name %}{{ u.first_name }}{% else %}{{ u.username }}{% endif %}
+                  </div>
+                  <div class="text-[11px] text-outline">@{{ u.username }}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Email -->
+            <td class="py-4 px-5 text-on-surface-variant font-medium">
+              {{ u.email }}
+            </td>
+
+            <!-- Roles badges -->
+            <td class="py-4 px-5">
+              <div class="flex flex-wrap items-center gap-1.5">
+                {% for group in u.groups.all %}
+                  {% if group.name == 'administrador' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary-container/20 text-primary border border-primary/30 uppercase tracking-wide">
+                      <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      {{ group.name }}
+                    </span>
+                  {% elif group.name == 'vendedor' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary/20 text-secondary border border-secondary/30 uppercase tracking-wide">
+                      <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                      {{ group.name }}
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-container-high text-on-surface-variant border border-outline-variant/30 uppercase tracking-wide">
+                      <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                      {{ group.name }}
+                    </span>
+                  {% endif %}
+                {% empty %}
+                  <span class="text-xs text-outline italic">Sin roles</span>
+                {% endfor %}
+              </div>
+            </td>
+
+            <!-- Permisos directos -->
+            <td class="py-4 px-5 text-outline hidden md:table-cell">
+              {% if u.user_permissions.all %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-tertiary/15 text-tertiary font-medium text-[11px]">
+                  <span class="material-symbols-outlined text-[13px]">key</span>
+                  +{{ u.user_permissions.count }} directos
+                </span>
+              {% else %}
+                <span class="text-xs text-outline">—</span>
+              {% endif %}
+            </td>
+
+            <!-- Acciones -->
+            <td class="py-4 px-5 text-right">
+              <a 
+                href="{% url 'authentication:user_manage_access' u.id %}" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface hover:text-primary border border-outline-variant/30 transition-all font-medium text-xs shadow-xs"
+                title="Modificar roles y permisos de {{ u.username }}"
+              >
+                <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                <span>Gestionar Roles</span>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

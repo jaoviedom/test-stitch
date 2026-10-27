@@ -1,0 +1,192 @@
+module: catalog
+user_stories:
+  - id: HU-001
+    slug: registrar-nueva-categoria
+    title: Registrar nueva categoría
+  - id: HU-002
+    slug: editar-categoria
+    title: Editar categoría
+  - id: HU-003
+    slug: consultar-listar-categorias
+    title: Consultar y listar categorías
+
+backend:
+  app_name: inventario
+  permissions:
+    - app_label: inventario
+      codename: view_categoria
+      name: Puede ver y listar categorías
+    - app_label: inventario
+      codename: add_categoria
+      name: Puede agregar categorías
+    - app_label: inventario
+      codename: change_categoria
+      name: Puede cambiar/editar categorías
+
+  models:
+    - name: Categoria
+      module: inventario.models
+      db_table: inventario_categoria
+      description: Modelo para categorizar los productos y artículos del inventario de la tienda.
+      fields:
+        - name: id
+          type: AutoField / BigAutoField
+          primary_key: true
+        - name: nombre
+          type: CharField(max_length=100, unique=True)
+          verbose_name: "Nombre de la categoría"
+          help_text: "Nombre identificador único de la categoría."
+        - name: slug
+          type: SlugField(max_length=120, unique=True, blank=True)
+          verbose_name: "Slug URL"
+          help_text: "Identificador amigable generado automáticamente a partir del nombre."
+        - name: descripcion
+          type: TextField(max_length=500, blank=True, default="")
+          verbose_name: "Descripción"
+          help_text: "Detalle opcional sobre los artículos que engloba la categoría."
+        - name: activo
+          type: BooleanField(default=True)
+          verbose_name: "Activo"
+          help_text: "Indica si la categoría se encuentra disponible para asociar productos."
+        - name: creado_en
+          type: DateTimeField(auto_now_add=True)
+          verbose_name: "Fecha de creación"
+        - name: actualizado_en
+          type: DateTimeField(auto_now=True)
+          verbose_name: "Última actualización"
+      options:
+        verbose_name: "Categoría"
+        verbose_name_plural: "Categorías"
+        ordering: ["nombre"]
+      methods:
+        - name: __str__
+          returns: str
+          description: "Retorna el nombre de la categoría."
+        - name: clean
+          description: "Valida que no exista otra categoría con el mismo nombre normalizado (case-insensitive)."
+        - name: total_productos
+          returns: int
+          description: "Retorna el conteo de productos asociados de manera segura (0 si no hay relación)."
+
+  services:
+    - class_name: CrearCategoriaService
+      module: inventario.services
+      methods:
+        - name: execute
+          type: staticmethod
+          decorator: "@transaction.atomic"
+          parameters:
+            - name: nombre
+              type: str
+              required: true
+            - name: descripcion
+              type: str
+              required: false
+              default: '""'
+            - name: activo
+              type: bool
+              required: false
+              default: true
+          returns: inventario.models.Categoria
+          raises:
+            - django.core.exceptions.ValidationError
+
+    - class_name: EditarCategoriaService
+      module: inventario.services
+      methods:
+        - name: execute
+          type: staticmethod
+          decorator: "@transaction.atomic"
+          parameters:
+            - name: categoria
+              type: inventario.models.Categoria
+              required: true
+            - name: nombre
+              type: str
+              required: true
+            - name: descripcion
+              type: str
+              required: false
+              default: '""'
+            - name: activo
+              type: bool
+              required: false
+              default: true
+          returns: inventario.models.Categoria
+          raises:
+            - django.core.exceptions.ValidationError
+
+    - class_name: ListarCategoriasService
+      module: inventario.services
+      methods:
+        - name: get_queryset
+          type: staticmethod
+          parameters:
+            - name: query
+              type: str
+              required: false
+              default: '""'
+          returns: django.db.models.QuerySet
+          description: >
+            Retorna el QuerySet ordenado de categorías con soporte para búsqueda
+            filtrada case-insensitive por nombre y descripción.
+
+  forms:
+    - class_name: CategoriaForm
+      module: inventario.forms
+      base_class: django.forms.ModelForm
+      model: inventario.models.Categoria
+      fields:
+        - nombre
+        - descripcion
+        - activo
+
+  routing_and_views:
+    - path: "inventario/categorias/"
+      view_name: inventario:lista_categorias
+      function: inventario.views.categorias_view
+      http_methods:
+        - GET: >
+            Lista las categorías paginadas (10 por página). Soporta parámetro de búsqueda
+            opcional ?q= y paginación con ?page=.
+      auth_requirements:
+        - login_required: true
+        - permission_required: "inventario.view_categoria"
+        - raise_exception: true
+
+    - path: "inventario/categorias/crear/"
+      view_name: inventario:crear_categoria
+      function: inventario.views.crear_categoria_view
+      http_methods:
+        - GET: Renderiza el formulario de creación.
+        - POST: Valida y procesa la creación con CrearCategoriaService.
+      auth_requirements:
+        - login_required: true
+        - permission_required: "inventario.add_categoria"
+        - raise_exception: true
+
+    - path: "inventario/categorias/<int:pk>/editar/"
+      view_name: inventario:editar_categoria
+      function: inventario.views.editar_categoria_view
+      http_methods:
+        - GET: Obtiene la categoría por pk (o 404) y renderiza formulario precargado.
+        - POST: Valida los cambios y actualiza mediante EditarCategoriaService.
+      auth_requirements:
+        - login_required: true
+        - permission_required: "inventario.change_categoria"
+        - raise_exception: true
+
+frontend:
+  templates:
+    - path: "inventario/categoria_list.html"
+      layout: "layouts/base.html"
+      page_title: "Catálogo de Categorías · TeckStore Admin"
+      features:
+        - Formulario de búsqueda accesible con id="search-input", label y botón limpiar.
+        - Tabla responsiva con columnas: Nombre, Slug, Descripción, Total Productos, Estado, Fecha Creación, Acciones.
+        - Bloque de paginación con enlaces accesibles (aria-label) preservando el parámetro de búsqueda.
+        - Estado vacío para catálogo sin registros y búsqueda sin coincidencias.
+        - Tipografía numérica font-mono tabular-nums.
+    - path: "inventario/categoria_form.html"
+      layout: "layouts/base.html"
+      page_title: "Categoría · TeckStore Admin"

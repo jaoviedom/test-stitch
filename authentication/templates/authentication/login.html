@@ -1,0 +1,260 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión · TeckStore Admin</title>
+
+  <!-- Inline script to prevent FOUC / early theme sync -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('teckstore_theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <!-- Local Tailwind CSS v4 & Local Fonts (Plus Jakarta Sans & Material Symbols) -->
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen relative flex flex-col justify-between selection:bg-primary-container selection:text-on-primary-container">
+
+  <!-- Ambient Backdrop Lights -->
+  <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-surface-container/60 via-background to-surface-container-lowest"></div>
+  <div class="pointer-events-none absolute inset-0 opacity-[0.035] bg-[linear-gradient(to_right,#adc6ff_1px,transparent_1px),linear-gradient(to_bottom,#adc6ff_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+
+  <!-- Top Header Minimal -->
+  <header class="relative z-10 w-full pt-6 px-6 lg:px-12">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="{% url 'inventario:dashboard' %}" class="flex items-center gap-2.5 group">
+        <div class="w-9 h-9 rounded-xl bg-surface-container-high border border-outline-variant/30 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
+          <span class="material-symbols-outlined text-[20px]">bolt</span>
+        </div>
+        <span class="font-bold text-lg tracking-tight text-on-surface">TeckStore</span>
+      </a>
+
+      <div class="flex items-center gap-3">
+        <!-- Theme Toggle Switch -->
+        <button id="themeToggleBtn" type="button" aria-label="Cambiar tema visual" class="w-9 h-9 rounded-xl bg-surface-container-high border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]" id="themeIcon">light_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Login Section -->
+  <main class="relative z-10 w-full flex-1 flex flex-col justify-center items-center py-10 px-4 sm:px-6">
+    <div class="flex flex-col w-full items-center justify-center relative">
+
+      <!-- Ambient Glow Behind Card -->
+      <div class="absolute -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Central Card Module -->
+      <div class="w-full max-w-md relative z-20">
+        <div class="bg-surface-container rounded-2xl p-6 sm:p-8 shadow-2xl border border-outline-variant/30 relative overflow-hidden">
+
+          <!-- Top Highlight Gradient Border -->
+          <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+
+          <!-- Card Header -->
+          <div class="flex flex-col items-center text-center">
+
+            <!-- Lock Icon -->
+            <div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center mb-3 shadow-md border border-outline-variant/20">
+              <span class="material-symbols-outlined text-primary text-[26px]">lock</span>
+            </div>
+
+            <h1 class="text-2xl font-bold text-on-surface tracking-tight mb-1">
+              Iniciar Sesión
+            </h1>
+            <p class="text-sm text-on-surface-variant max-w-xs">
+              Ingresa tus credenciales para acceder
+            </p>
+          </div>
+
+          <!-- Flash Messages -->
+          {% if messages %}
+            <div class="mt-4 space-y-2">
+              {% for message in messages %}
+                <div role="status" class="p-3 rounded-xl text-sm font-medium flex items-center gap-2 {% if message.tags == 'error' %}bg-error-container/40 text-error border border-error/30{% elif message.tags == 'success' %}bg-secondary-container/30 text-secondary border border-secondary/30{% else %}bg-surface-container-high text-on-surface-variant border border-outline-variant/30{% endif %}">
+                  <span class="material-symbols-outlined text-[18px]">info</span>
+                  <span>{{ message }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <!-- Form Non Field Errors (role="alert") -->
+          {% if form.non_field_errors %}
+            <div role="alert" aria-live="polite" class="mt-4 p-3.5 rounded-xl bg-error-container/40 border border-error/40 text-error text-sm flex items-start gap-2.5">
+              <span class="material-symbols-outlined text-[20px] shrink-0 text-error">error</span>
+              <div class="space-y-1">
+                {% for error in form.non_field_errors %}
+                  <p class="font-medium">{{ error }}</p>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Login Form -->
+          <form class="mt-6 flex flex-col gap-4" method="POST" action="{% url 'authentication:login' %}" novalidate>
+            {% csrf_token %}
+
+            {% if next %}
+              <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <!-- Username / Email Field -->
+            <div class="flex flex-col gap-1.5 text-left">
+              <label class="text-xs font-semibold text-on-surface-variant" for="id_username">
+                Usuario o Correo Electrónico
+              </label>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px] pointer-events-none">
+                  alternate_email
+                </span>
+                <input
+                  type="text"
+                  name="username"
+                  id="id_username"
+                  value="{{ form.username.value|default:'' }}"
+                  autocomplete="username"
+                  required
+                  placeholder="usuario@teckstore.io o @usuario"
+                  class="w-full h-11 pl-10 pr-3.5 rounded-xl bg-surface-container-lowest text-on-surface text-sm placeholder:text-outline/60 border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all {% if form.username.errors %}border-error ring-1 ring-error{% endif %}"
+                  aria-invalid="{% if form.username.errors %}true{% else %}false{% endif %}"
+                >
+              </div>
+              {% if form.username.errors %}
+                <p role="alert" class="text-error text-xs mt-1" aria-live="polite">{{ form.username.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Password Field -->
+            <div class="flex flex-col gap-1.5 text-left">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-on-surface-variant" for="id_password">
+                  Contraseña
+                </label>
+                <a class="text-xs font-medium text-primary hover:text-primary-fixed transition-colors" href="#">
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </div>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px] pointer-events-none">
+                  key
+                </span>
+                <input
+                  type="password"
+                  name="password"
+                  id="id_password"
+                  autocomplete="current-password"
+                  required
+                  placeholder="••••••••••••"
+                  class="w-full h-11 pl-10 pr-11 rounded-xl bg-surface-container-lowest text-on-surface text-sm placeholder:text-outline/60 border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all {% if form.password.errors %}border-error ring-1 ring-error{% endif %}"
+                  aria-invalid="{% if form.password.errors %}true{% else %}false{% endif %}"
+                >
+                <button
+                  type="button"
+                  id="togglePasswordBtn"
+                  aria-label="Alternar visibilidad de contraseña"
+                  class="absolute right-3 text-outline hover:text-on-surface focus:outline-none transition-colors cursor-pointer"
+                >
+                  <span class="material-symbols-outlined text-[20px]" id="passwordIcon">visibility</span>
+                </button>
+              </div>
+              {% if form.password.errors %}
+                <p role="alert" class="text-error text-xs mt-1" aria-live="polite">{{ form.password.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Remember Device Checkbox -->
+            <div class="flex items-center justify-between pt-1">
+              <label class="flex items-center gap-2.5 cursor-pointer select-none" for="id_remember_me">
+                <input
+                  type="checkbox"
+                  name="remember_me"
+                  id="id_remember_me"
+                  {% if form.remember_me.value %}checked{% endif %}
+                  class="w-4 h-4 rounded bg-surface-container-lowest text-primary-container focus:ring-primary focus:ring-offset-0 focus:outline-none cursor-pointer accent-primary-container border-outline-variant/40"
+                >
+                <span class="text-xs text-on-surface-variant hover:text-on-surface transition-colors">
+                  Recuérdame
+                </span>
+              </label>
+            </div>
+
+            <!-- Submit Button CTA -->
+            <button
+              id="submitBtn"
+              type="submit"
+              class="w-full h-11 mt-2 rounded-xl bg-primary-container hover:bg-primary-container/90 active:scale-[0.99] text-on-primary-container font-semibold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+            >
+              <span>Acceder</span>
+              <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </button>
+          </form>
+
+          <!-- Registration Link Footer -->
+          <div class="mt-6 pt-4 text-center border-t border-outline-variant/30">
+            <p class="text-xs text-on-surface-variant">
+              ¿No tienes una cuenta operativa?
+              <a class="text-primary font-semibold hover:underline ml-1" href="{% url 'authentication:register' %}">
+                Regístrate
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Script for Password Visibility and Theme Toggle -->
+  <script>
+    (function() {
+      // Toggle Password Visibility
+      const toggleBtn = document.getElementById('togglePasswordBtn');
+      const passwordInput = document.getElementById('id_password');
+      const passwordIcon = document.getElementById('passwordIcon');
+
+      if (toggleBtn && passwordInput && passwordIcon) {
+        toggleBtn.addEventListener('click', function() {
+          const isPassword = passwordInput.getAttribute('type') === 'password';
+          passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+          passwordIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
+        });
+      }
+
+      // Theme Switcher Sync
+      const themeBtn = document.getElementById('themeToggleBtn');
+      const themeIcon = document.getElementById('themeIcon');
+
+      function updateThemeIcon() {
+        if (themeIcon) {
+          const isDark = document.documentElement.classList.contains('dark');
+          themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        }
+      }
+
+      updateThemeIcon();
+
+      if (themeBtn) {
+        themeBtn.addEventListener('click', function() {
+          if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('teckstore_theme', 'light');
+          } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('teckstore_theme', 'dark');
+          }
+          updateThemeIcon();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

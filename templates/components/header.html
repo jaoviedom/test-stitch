@@ -1,0 +1,149 @@
+<!-- Global Header Component (TeckStore Admin Dashboard) -->
+<header class="sticky top-0 z-30 h-16 w-full bg-surface/85 backdrop-blur-xl border-b border-outline-variant/20 transition-colors">
+  <div class="h-full w-full px-4 lg:px-8 flex items-center justify-between gap-4">
+    <!-- Left Section: Mobile Menu Button & Global Search -->
+    <div class="flex items-center gap-3 flex-1 max-w-xl">
+      <button aria-label="Abrir menú de navegación" class="lg:hidden flex items-center justify-center p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors focus:outline-none" id="open-sidebar-btn">
+        <span class="material-symbols-outlined text-[24px]">menu</span>
+      </button>
+
+      <div class="relative w-full max-w-md">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">search</span>
+        <input 
+          id="global-search-input"
+          class="w-full h-10 pl-9 pr-14 rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-sm placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" 
+          placeholder="Buscar productos, pedidos, SKU..." 
+          type="text"
+          autocomplete="off"
+        >
+        <div class="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-outline-variant/40 bg-surface-container text-on-surface-variant text-[11px] font-mono pointer-events-none">
+          <span>⌘</span><span>K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Section: Actions & Profile -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Interactive Theme Toggle Switch -->
+      <button 
+        id="theme-toggle" 
+        role="switch"
+        aria-checked="true"
+        aria-label="Alternar modo de tema"
+        class="relative inline-flex items-center h-9 w-[4.5rem] p-1 rounded-full bg-surface-container-high border border-outline-variant/40 hover:border-outline-variant transition-colors cursor-pointer select-none group focus:outline-none focus:ring-2 focus:ring-primary/40"
+        title="Modo Oscuro activo (clic para cambiar a Modo Claro)"
+      >
+        <!-- Background Track with Icons -->
+        <div class="w-full flex items-center justify-between px-1.5 text-outline pointer-events-none">
+          <span class="material-symbols-outlined text-[15px] text-amber-500">light_mode</span>
+          <span class="material-symbols-outlined text-[15px] text-primary">dark_mode</span>
+        </div>
+
+        <!-- Sliding Knob Thumb with Active Mode Icon -->
+        <span 
+          id="theme-knob"
+          class="absolute top-1 left-1 w-7 h-7 rounded-full bg-primary-container text-on-primary-container shadow-md flex items-center justify-center transition-all duration-300 ease-out transform translate-x-9 pointer-events-none"
+        >
+          <span id="theme-knob-icon" class="material-symbols-outlined text-[16px]">dark_mode</span>
+        </span>
+      </button>
+
+      <!-- Notifications -->
+      <div class="relative">
+        <button 
+          id="notifications-button"
+          aria-label="Notificaciones del sistema" 
+          class="relative flex items-center justify-center w-10 h-10 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all focus:outline-none"
+        >
+          <span class="material-symbols-outlined text-[20px]">notifications</span>
+          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface animate-ping"></span>
+          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span>
+        </button>
+      </div>
+
+      <div class="h-5 w-[1px] bg-outline-variant/30 mx-0.5 hidden sm:block"></div>
+
+      <!-- User Dropdown Menu -->
+      <div class="relative">
+        {% if user.is_authenticated %}
+        <button 
+          id="user-menu-button"
+          aria-expanded="false" 
+          aria-haspopup="true" 
+          class="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl hover:bg-surface-container-high transition-all text-left group focus:outline-none cursor-pointer"
+        >
+          <!-- User Avatar / Initials Badge -->
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-container to-secondary flex items-center justify-center font-bold text-xs text-on-primary-container ring-1 ring-outline-variant/40 shadow-xs group-hover:ring-primary transition-all">
+            {{ user.first_name|default:user.username|slice:":2"|upper }}
+          </div>
+          <div class="hidden md:flex flex-col text-left min-w-0">
+            <span class="text-xs font-semibold text-on-surface leading-tight truncate">
+              {% if user.first_name %}{{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}{% else %}{{ user.username }}{% endif %}
+            </span>
+            <span class="text-[11px] text-on-surface-variant leading-tight truncate">
+              {% if user.is_superuser %}
+                Administrador
+              {% elif user.groups.first %}
+                {{ user.groups.first.name|capfirst }}
+              {% else %}
+                Usuario
+              {% endif %}
+            </span>
+          </div>
+          <span class="material-symbols-outlined text-[18px] text-outline group-hover:text-on-surface transition-transform duration-200 hidden sm:block" id="user-menu-chevron">expand_more</span>
+        </button>
+
+        <!-- Dropdown Popup Menu -->
+        <div 
+          id="user-dropdown-menu" 
+          class="hidden absolute top-[calc(100%+0.5rem)] right-0 w-56 rounded-2xl bg-surface-container-high border border-outline-variant/40 shadow-[0_12px_32px_-4px_rgba(0,0,0,0.65)] py-2 z-50 flex-col backdrop-blur-xl"
+        >
+          <!-- User Info Header -->
+          <div class="px-3.5 py-2 border-b border-outline-variant/20">
+            <p class="text-xs font-semibold text-on-surface truncate">
+              {% if user.first_name %}{{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}{% else %}{{ user.username }}{% endif %}
+            </p>
+            <p class="text-[11px] text-outline truncate">{{ user.email|default:user.username }}</p>
+            <div class="flex flex-wrap items-center gap-1 mt-1.5">
+              {% for group in user.groups.all %}
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-highest text-primary border border-outline-variant/30 uppercase">
+                  {{ group.name }}
+                </span>
+              {% empty %}
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-container-highest text-on-surface-variant">
+                  Rol: Usuario
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <a href="{% url 'authentication:profile' %}" class="flex items-center gap-2.5 px-3.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-colors">
+            <span class="material-symbols-outlined text-[18px]">badge</span>
+            <span>Ver perfil</span>
+          </a>
+
+
+          <a href="#" class="flex items-center gap-2.5 px-3.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-colors">
+            <span class="material-symbols-outlined text-[18px]">tune</span>
+            <span>Configuración</span>
+          </a>
+
+          <div class="my-1 border-t border-outline-variant/20"></div>
+
+          <a href="{% url 'authentication:logout' %}" class="flex items-center gap-2.5 px-3.5 py-2 text-sm text-error hover:bg-error/10 transition-colors">
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+            <span>Cerrar sesión</span>
+          </a>
+        </div>
+
+        {% else %}
+        <!-- Unauthenticated Guest State -->
+        <a href="{% url 'authentication:register' %}" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary-container text-on-primary-container font-semibold text-xs hover:brightness-110 active:scale-95 transition-all shadow-md">
+          <span class="material-symbols-outlined text-[16px]">login</span>
+          <span>Iniciar Sesión</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</header>
